@@ -45,6 +45,6 @@ def merge_route_json(folder_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--folder',default='eval_pad1', help='old foo help')
+    parser.add_argument('-f', '--folder',default='eval_pad', help='old foo help')
     args = parser.parse_args()
     merge_route_json(args.folder)

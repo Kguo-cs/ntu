@@ -45,7 +45,7 @@ def compute_corners(boxes):
 
 
 class CustomNuScenes3DDataset(B2D_VAD_Dataset):
-    def __init__(self,type,ann_file, pipeline, modality,i   ):
+    def __init__(self,type,ann_file, pipeline, modality):
         super().__init__(point_cloud_range=point_cloud_range,queue_length=1,data_root=data_root,ann_file=ann_file,eval_cfg=eval_cfg,map_file=map_file,pipeline=pipeline,name_mapping=NameMapping,modality=modality,classes=class_names)
         self.type=type
         self._cache_path = cache_path+type+"/"
@@ -54,9 +54,9 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
         self.bev_pixel_height: int = 256 // 2
         self.bev_pixel_size= 0.25
 
-        self.data_infos=self.data_infos[i*10000:(i+1)*10000]
+        # self.data_infos=self.data_infos[i*10000:(i+1)*10000]
 
-        self.i=i
+        #self.i=i
 
     def get_fut_box(self,gt_agent_feats,gt_agent_boxes,T=6):
         agent_num = gt_agent_feats.shape[0]
@@ -102,14 +102,12 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
     def __getitem__(self, idx):
 
-        idx=8367
-
         if self.type=="train":
             data = self.prepare_train_data(idx)
         else:
             data= self.prepare_test_data(idx)
 
-        token=str(idx+self.i*10000)
+        token=str(idx)#+self.i*10000
 
         fut_boxes=None
 
@@ -150,7 +148,6 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             gt_agent_boxes=gt_bboxes_3d.tensor
 
             #[x, y, z, w, l, h, yaw]
-            category_index = gt_attr_labels[ :,27].to(int)
 
             #agent_mask=(category_index!=4) & (category_index!=6)
             fut_boxes=self.get_fut_box(gt_attr_labels,gt_agent_boxes)
@@ -164,7 +161,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             ann_info = self.data_infos[idx]
 
             ego_vel =ann_info["ego_vel"] [:1]#np.array([ann_info['speed'],0,0])
-            #ego_accel = np.linalg.norm(ann_info["ego_accel"][:2])  #np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
+            ego_accel = np.linalg.norm(ann_info["ego_accel"][:2])  #np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
 
             ego_translation = ann_info['ego_translation']
 
@@ -186,7 +183,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             gt_ego_fut_cmd = ego_fut_cmd.reshape(6)
 
-            features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.zeros([1]),torch.tensor(local_command_xy), gt_ego_fut_cmd,torch.zeros([1])])[None].to(torch.float32)
+            features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.zeros(ego_accel),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
             #features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(local_far_command_xy),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
@@ -220,54 +217,6 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             targets["token"] = token
             #corners1=gt_bboxes_3d.corners[:,[0,3,4,7],:2]
-
-            if self.type == "train":
-                gt_bboxes_3d_bev = gt_bboxes_3d.bev#x,y,w,h,heading
-
-                gt_bboxes_3d_bev[:,-1]=-(gt_bboxes_3d_bev[:,-1]+np.pi/2)
-
-                distances = np.linalg.norm(gt_bboxes_3d_bev[:, :2], axis=-1)
-
-                gt_bboxes_3d_sort = gt_bboxes_3d_bev[np.argsort(distances)][:30]
-
-                gt_bboxes_3d_all = np.concatenate([gt_bboxes_3d_sort, np.zeros([30 - len(gt_bboxes_3d_sort), 5])], axis=0)
-
-                agent_labels = np.zeros([30])
-
-                agent_labels[:len(gt_bboxes_3d_sort)] = True
-
-                targets["agent_states"] = gt_bboxes_3d_all
-                targets["agent_labels"] = agent_labels
-
-                map_gt_bboxes_3d=data['map_gt_bboxes_3d'].data.instance_list
-                map_gt_labels_3d=data['map_gt_labels_3d'].data#{'Broken':0, 'Solid':1, 'SolidSolid':2,'Center':3,'TrafficLight':4,'StopSign':5}
-                bev_semantic_map = np.zeros( (self.bev_pixel_height, self.bev_pixel_width), dtype=np.int64)#128,256  front 128
-
-                for map_label in range(6):
-                    map_linestring_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1], dtype=np.uint8)#256,128
-                    for label,linestring in zip(map_gt_labels_3d,map_gt_bboxes_3d):
-                        if label==map_label:
-                            points = np.array(linestring.coords).reshape((-1, 1, 2))
-                            points = self._coords_to_pixel(points)#
-                            cv2.polylines(map_linestring_mask, [points], isClosed=False, color=255, thickness=2)
-                    map_linestring_mask = np.rot90(map_linestring_mask)[::-1]
-                    entity_mask = map_linestring_mask > 0
-                    bev_semantic_map[entity_mask] = map_label+1
-
-                corners=compute_corners(gt_bboxes_3d_bev)
-
-                for agent_label in range(8):
-                    box_polygon_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1], dtype=np.uint8)
-                    for label,coords in zip(category_index,corners):
-                        if label==agent_label:
-                            exterior = coords.reshape((-1, 1, 2))
-                            exterior = self._coords_to_pixel(exterior)
-                            cv2.fillPoly(box_polygon_mask, [exterior], color=255)
-                    box_polygon_mask = np.rot90(box_polygon_mask)[::-1]
-                    entity_mask = box_polygon_mask > 0
-                    bev_semantic_map[entity_mask] = agent_label+7
-
-                targets["bev_semantic_map"]=bev_semantic_map
 
             town_name = ann_info['town_name']
             targets["town_name"]=town_name
@@ -347,17 +296,16 @@ for type in ['train']  :#,'train','val'
         pipeline=train_pipeline
     else:
         pipeline=test_pipeline
-    for i in range(1):
 
-        nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality,i)
+    nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality)
 
-        data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=12,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
+    data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=12,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
 
-        for  data in tqdm(data_loader):
-            for key,value in data[0].items():
-                fut_box[key]=value
+    for  data in tqdm(data_loader):
+        for key,value in data[0].items():
+            fut_box[key]=value
 
-    # save_path=type+"_fut_boxes.gz"
+    save_path=type+"_fut_boxes.gz"
 
-    # data_dict_path=Path(cache_path)/save_path
-    # dump_feature_target_to_pickle(data_dict_path, fut_box)
+    data_dict_path=Path(cache_path)/save_path
+    dump_feature_target_to_pickle(data_dict_path, fut_box)

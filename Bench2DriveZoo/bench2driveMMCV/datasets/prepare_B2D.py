@@ -402,5 +402,5 @@ if __name__ == "__main__":
     print('processing val data...')
     generate_infos(train_val_split['val'],workers,'val',args.tmp_dir)
     print('processing map data...')
-    #gengrate_map(MAP_ROOT)
+    gengrate_map(MAP_ROOT)
     print('finish!')

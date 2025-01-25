@@ -5,8 +5,7 @@ qsub -I -l select=1:ngpus=1 -l walltime=48:00:00 -P 12002486
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 
-# install
-
+# Install
 ```bash
 conda create -n pad python=3.8
 conda activate pad
@@ -30,6 +29,13 @@ export Bench2Drive_ROOT="$HOME/pad_workspace/Bench2Drive"
 
 # Navsim
 1. download the navtrain dataset and map as [Navsim](https://github.com/autonomousvision/navsim) 
+```bash
+bash download/download_maps.sh
+bash download/download_navtrain.sh
+bash download/download_navtest.sh
+```
+Put the downloaded maps in "dataset/maps", and dataset in "dataset/navsim_logs" and "dataset/sensor_blobs" 
+
 2. cache training data and metric
 ```bash
 python navsim/planning/script/run_training_metric_caching.py
@@ -48,12 +54,13 @@ Then, submit the created "submission.pkl" to the [official leaderboard](https://
 
 
 # Bench2drive
-1. download the base dataset, setup carla, prepare the data info as [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 
-"""
+1. download the base dataset as [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) 
+```bash
 huggingface-cli download --repo-type dataset --resume-download rethinklab/Bench2Drive --local-dir Bench2Drive-Base
-"""
-Download and setup CARLA 0.9.15
-"""
+```
+
+2. Download and setup CARLA 0.9.15
+```bash
     mkdir carla
     cd carla
     wget https://carla-releases.s3.us-east-005.backblazeb2.com/Linux/CARLA_0.9.15.tar.gz
@@ -62,20 +69,24 @@ Download and setup CARLA 0.9.15
     cd .. && bash ImportAssets.sh
     export CARLA_ROOT=YOUR_CARLA_PATH
     echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> YOUR_CONDA_PATH/envs/YOUR_CONDA_ENV_NAME/lib/python3.7/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
-"""
-2. cache training data and metric
+```
+3. [Prepare Dataset](Bench2DriveZoo/docs/DATA_PREP.md)
+
+4. cache training data and metric
 ```bash
 python Bench2Drive/leaderboard/pad_team_code/b2d_datacache.py
 ```
-3. train Bench2drive model
+
+5. train Bench2drive model
 ```bash
 python navsim/planing/script/run_b2d_training.py
 ```
-4. Bench2drive closeloop evaluation
+
+6. Bench2drive closeloop evaluation
 ```bash
 cd Bench2Drive
 python leaderboard/leaderboard/pad_eval.py
 python tools/merge_route_json.py
-python tools/efficiency_smoothness_benchmark.py
 python tools/ability_benchmark.py
+python tools/efficiency_smoothness_benchmark.py
 ```

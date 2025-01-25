@@ -1,0 +1,32 @@
+# python
+*.pyc
+**/__pycache__/
+.pytest_cache/*
+.pydevproject
+
+# IDE
+.vscode/*
+
+# Pip
+*.egg-info
+
+# files
+*.log
+#*.pkl
+*.jpg
+*.pcd
+*.png
+
+dataset/
+exp/
+.idea/
+.vscode/
+.history/
+.zip
+Bench2DriveZoo/data/bench2drive/
+Bench2DriveZoo/data/infos/
+Bench2DriveZoo/chpts/
+Bench2Drive/eval_pad/
+Bench2Drive/eval_vis/
+trash/
+

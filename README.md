@@ -5,7 +5,6 @@ qsub -I -l select=1:ngpus=1 -l walltime=48:00:00 -P 12002486
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 
-
 # install
 
 ```bash

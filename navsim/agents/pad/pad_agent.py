@@ -185,43 +185,41 @@ class PadAgent(AbstractAgent):
             pred_states = agents_state[..., :-gt_states.shape[-3]].reshape(gt_states.shape)
             pred_logits = agents_state[..., -gt_states.shape[-3]:].reshape(gt_valid.shape)
 
-            l1_loss = F.l1_loss(pred_states, gt_states, reduction="none")[gt_valid]
+            pred_l1_loss = F.l1_loss(pred_states, gt_states, reduction="none")[gt_valid]
 
-            if len(l1_loss):
-                l1_loss = l1_loss.mean()
+            if len(pred_l1_loss):
+                pred_l1_loss = pred_l1_loss.mean()
             else:
-                l1_loss = pred_states.mean() * 0
+                pred_l1_loss = pred_states.mean() * 0
 
-            ce_loss = F.binary_cross_entropy_with_logits(pred_logits, gt_valid.to(torch.float32), reduction="mean")
+            pred_ce_loss = F.binary_cross_entropy_with_logits(pred_logits, gt_valid.to(torch.float32), reduction="mean")
 
         else:
-            ce_loss = 0
-            l1_loss = 0
+            pred_ce_loss = 0
+            pred_l1_loss = 0
 
         if pred_area_logits is not None:
             pred_area_logits = pred_area_logits.reshape(gt_ego_areas.shape)
 
-            ce_area_loss = F.binary_cross_entropy_with_logits(pred_area_logits, gt_ego_areas.to(torch.float32),
+            pred_area_loss = F.binary_cross_entropy_with_logits(pred_area_logits, gt_ego_areas.to(torch.float32),
                                                               reduction="mean")
         else:
-            ce_area_loss = 0
+            pred_area_loss = 0
 
-        score_ce_loss = self.bce_logit_loss(pred_logit[..., -6:-1], target_scores[..., -6:-1])  # .mean()
+        sub_score_loss = self.bce_logit_loss(pred_logit[..., -6:-1], target_scores[..., -6:-1])  # .mean()
 
-        score_ce_loss_final = self.bce_logit_loss(pred_logit[..., -1], target_scores[..., -1])  # .mean()
+        final_score_loss = self.bce_logit_loss(pred_logit[..., -1], target_scores[..., -1])  # .mean()
 
         if pred_logit2 is not None:
-            score_ce_loss2 = self.bce_logit_loss(pred_logit2[..., -6:-1], target_scores[..., -6:-1])  # .mean()
+            sub_score_loss2 = self.bce_logit_loss(pred_logit2[..., -6:-1], target_scores[..., -6:-1])  # .mean()
 
-            score_ce_loss_final2 = self.bce_logit_loss(pred_logit2[..., -1], target_scores[..., -1])  # .mean()
+            final_score_loss2 = self.bce_logit_loss(pred_logit2[..., -1], target_scores[..., -1])  # .mean()
 
-            score_ce_loss=(score_ce_loss+score_ce_loss2)/2
+            sub_score_loss=(sub_score_loss+sub_score_loss2)/2
 
-            score_ce_loss_final=(score_ce_loss_final+score_ce_loss_final2)/2
+            final_score_loss=(final_score_loss+final_score_loss2)/2
 
-        score_loss = score_ce_loss + score_ce_loss_final + ce_loss + 0.1 * l1_loss + 2 * ce_area_loss  # +sim_loss#+score_real_loss #+best_loss/32
-
-        return score_loss, score_ce_loss, score_ce_loss_final, ce_loss, 0.1 * l1_loss, ce_area_loss
+        return sub_score_loss, final_score_loss, pred_ce_loss, pred_l1_loss, pred_area_loss
 
     def diversity_loss(self, proposals):
         dist = torch.linalg.norm(proposals[:, :, None] - proposals[:, None], dim=-1, ord=1).mean(-1)
@@ -262,16 +260,20 @@ class PadAgent(AbstractAgent):
         inter_loss0 = inter_loss_list[0]
 
         if "pred_logit" in pred.keys():
-            score_loss, score_ce_loss, score_ce_loss1, ce_loss, l1_loss, ce_area_loss = self.score_loss(
+            sub_score_loss, final_score_loss, pred_ce_loss, pred_l1_loss, pred_area_loss = self.score_loss(
                 pred["pred_logit"],pred["pred_logit2"],
                 pred["pred_agents_states"], pred["pred_area_logit"]
                 , target_scores, gt_states, gt_valid, gt_ego_areas,config)
         else:
-            score_loss = score_ce_loss = score_ce_loss1 = ce_loss = l1_loss = ce_area_loss = 0
+            sub_score_loss = final_score_loss = pred_ce_loss = pred_l1_loss = pred_area_loss = 0
 
         loss = (
                 config.trajectory_weight * trajectory_loss
-                + config.score_weight * score_loss
+                + config.sub_score_weight * sub_score_loss
+                + config.final_score_weight * final_score_loss
+                + config.pred_ce_weight * pred_ce_loss
+                + config.pred_l1_weight * pred_l1_loss
+                + config.pred_area_weight * pred_area_loss
         )
 
         pdm_score = pred["pdm_score"].detach()
@@ -282,18 +284,17 @@ class PadAgent(AbstractAgent):
         loss_dict = {
             "loss": loss,
             "trajectory_loss": trajectory_loss,
-            "score_loss": score_loss,
-            "score": score,
-            "best_score": best_score,
-            'score_ce_loss': score_ce_loss,
-            'score_ce_loss1': score_ce_loss1,
-            'ce_loss': ce_loss,
-            'l1_loss': l1_loss,
-            'ce_area_loss': ce_area_loss,
+            'sub_score_loss': sub_score_loss,
+            'final_score_loss': final_score_loss,
+            'pred_ce_loss': pred_ce_loss,
+            'pred_l1_loss': pred_l1_loss,
+            'pred_area_loss': pred_area_loss,
             "inter_loss0": inter_loss0,
             "inter_loss": inter_loss,
             "min_loss0": min_loss0,
             "min_loss": min_loss,
+            "score": score,
+            "best_score": best_score
         }
 
         return loss_dict

@@ -49,8 +49,7 @@ class SpatialCrossAttention(BaseModule):
                  **kwargs
                  ):
         super(SpatialCrossAttention, self).__init__(init_cfg)
-
-
+        
         self.init_cfg = init_cfg
         self.dropout = nn.Dropout(dropout)
         self.pc_range = pc_range

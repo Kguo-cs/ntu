@@ -1,10 +1,10 @@
 
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
-qsub -I -l select=1:ngpus=1 -l walltime=48:00:00 -P 12002486
+qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
-cd /home/users/ntu/lyuchen/scartch/keguo_projects/ntu
+cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 
 # Install
 ```bash

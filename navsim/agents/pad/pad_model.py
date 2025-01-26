@@ -34,6 +34,9 @@ class PadModel(nn.Module):
 
         batch_size = ego_status.shape[0]
 
+        # if self.b2d:
+        #     ego_status=torch.clamp(ego_status, min=-100, max=100)
+
         image_feature = self._backbone(camera_feature,img_metas=features)  # b,64,64,64
 
         output={}
@@ -77,46 +80,6 @@ class PadModel(nn.Module):
             pdm_score=(torch.sigmoid(pred_logit)+torch.sigmoid(pred_logit2))[:,:,-1]/2
         else:
             pdm_score=torch.sigmoid(pred_logit)[:,:,-1]
-
-        # if self.b2d:
-        #     vel=(proposals[:,:,1:,:2]-proposals[:,:,:-1,:2])/0.5
-
-        #     current_speed=cur_state[:,0]
-
-        #     target=cur_state[:,2:4]
-
-        #     desired_speed=torch.linalg.norm(vel,dim=-1).mean(-1)
-
-        #     acc=(desired_speed-current_speed[:,None])/0.5
-
-        #     distance = torch.linalg.norm((proposals[:,:,1:,:2]+proposals[:,:,:-1,:2])/ 2.0,dim=-1)
-
-        #     gap = torch.abs(distance-4).reshape(-1,distance.shape[-1])
-
-        #     best_gap=torch.argmin(gap,dim=-1)
-
-        #     best_aim=proposals.reshape(best_gap.shape[0],-1,3)[torch.arange(len(best_gap)),best_gap[None]].reshape(proposals.shape[0],proposals.shape[1],3)
-
-        #     angle=torch.arctan2(best_aim[:,:,1], best_aim[:,:,0])
-
-        #     angle_last = torch.arctan2(vel[:,:,-1,1], vel[:,:,-1,0])
-
-        #     angle_target= torch.arctan2(target[:,1], target[:,0])[:,None]
-
-        #     use_target_to_aim = torch.abs(angle_target) < torch.abs(angle)
-        #     use_target_to_aim2 = (torch.abs(angle_target-angle_last) > (0.3*2/np.pi)) & (target[:,1] < 10)[:,None]
-            
-        #     angle[use_target_to_aim]=angle_target
-        #     angle[use_target_to_aim2]=angle_target
-
-        #     angel_diff=angle-np.pi/2
-
-        #     lat_acc=acc*torch.sin(angel_diff)
-        #     lon_acc=acc*torch.cos(angel_diff)
-
-        #     comfort=(torch.abs(lat_acc)<4.89 ) & (lon_acc<2.40 ) & (lon_acc>-4.05) & (torch.abs(angel_diff*2)<0.95 ) & (desired_speed<16)
-
-        #     pdm_score+=0.2*comfort
 
         token = torch.argmax(pdm_score, dim=1)
         trajectory = proposals[torch.arange(batch_size), token]

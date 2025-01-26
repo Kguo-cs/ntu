@@ -29,7 +29,6 @@ class MyTransformeDecoder(nn.Module):
             self.add_embed = nn.Embedding(add_embeding, d_model)
 
         self.decoder = nn.TransformerDecoder(decoder_layer, layer_num)
-       #self.decoder = _get_clones(decoder_layer, layer_num)
 
         self.projout=projout
         if self.projout:
@@ -54,14 +53,6 @@ class MyTransformeDecoder(nn.Module):
 
         if pos_embed is not None:
             query_feature=query_feature+pos_embed
-
-        # for layer in self.decoder:
-        #     query_feature, keyval = layer(
-        #         query_feature, None, keyval, None,
-        #     )
-        # for mod in self.decoder:
-        #     output = mod(query_feature,keyval, tgt_is_causal=tgt_is_causal)
-
 
         output=self.decoder(query_feature,keyval,tgt_mask=tgt_mask)
         if self.projout:

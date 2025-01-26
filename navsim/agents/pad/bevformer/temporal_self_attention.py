@@ -108,16 +108,6 @@ class TemporalSelfAttention(BaseModule):
                 batch_first=True,
             )
             self.prev_decoder = nn.TransformerDecoder(decoder_layer, 1)
-            # encoder_layer = nn.TransformerEncoderLayer(
-            #     d_model=d_model,
-            #     nhead=num_heads,
-            #     dim_feedforward=d_ffn,
-            #     dropout=dropout,
-            #     batch_first=batch_first,
-            # )
-            #
-            # self.prev_decoder = nn.TransformerEncoder(encoder_layer, 1)
-
         else:
             self.sampling_offsets = nn.Linear(
                 embed_dims * self.num_bev_queue, num_bev_queue * num_heads * num_levels * num_points * 2)
@@ -202,18 +192,9 @@ class TemporalSelfAttention(BaseModule):
             if query_pos is not None:
                 query = query + query_pos
 
-            # query_t=query.reshape(-1,8,self.embed_dims)#32,8
-            #
-            # output=self.encoder_t(query_t).reshape(query.shape)
-            #
-            # output=output.view(len(query),-1,8,self.embed_dims).permute(0,2,1,3).reshape(8*len(query),-1,self.embed_dims)
-            #
-            # output=self.encoder_p(output).view(len(query),8,-1,self.embed_dims).permute(0,2,1,3).reshape(len(query),-1,self.embed_dims)
-            #output = self.encoder_t(query)
             prev_bev=kwargs['img_metas']["prev_bev"]
 
             query=self.prev_decoder(query,prev_bev)
-            # query=self.prev_decoder(query)
 
             return query
 

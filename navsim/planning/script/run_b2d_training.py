@@ -15,10 +15,10 @@ from navsim.common.dataloader import SceneLoader
 from navsim.planning.training.dataset import CacheOnlyDataset, Dataset
 from navsim.planning.training.agent_lightning_module import AgentLightningModule
 
-# from navsim.agents.pad.pad_agent import PadAgent
-# from navsim.agents.pad.b2d_config import PadConfig
+from navsim.agents.pad.pad_agent import PadAgent
+from navsim.agents.pad.b2d_config import PadConfig
 
-# PadAgent(PadConfig(),0,"")
+PadAgent(PadConfig(),0,"")
 
 
 logger = logging.getLogger(__name__)

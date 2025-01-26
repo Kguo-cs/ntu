@@ -2,7 +2,7 @@ _target_: navsim.agents.pad.pad_agent.PadAgent
 _convert_: 'all'
 
 config:
-  _target_: navsim.agents.pad.pad_config.PadConfig
+  _target_: navsim.agents.pad.navsim_config.PadConfig
   _convert_: 'all'
 
   trajectory_sampling:

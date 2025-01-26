@@ -133,19 +133,19 @@ def get_sub_score( fut_corners,proposals,target_trajectory,lidar2world,nearby_po
 
     min_dist = dist.min(0)
 
-    l2=np.linalg.norm(proposals[...,:2] - target_trajectory[...,:2] [ None],axis=-1)
+    # l2=np.linalg.norm(proposals[...,:2] - target_trajectory[...,:2] [ None],axis=-1)
 
-    l2_2s=l2[:,:4].mean(-1)
+    # l2_2s=l2[:,:4].mean(-1)
 
-    progress=np.exp(-l2_2s/5)
+    # progress=np.exp(-l2_2s/5)
 
-    # l1= np.linalg.norm(proposals - target_trajectory[ None],ord=1,axis=-1).mean(-1)
-    #
-    # min_index=np.argmin(l1,axis=0)
-    #
-    # progress =np.zeros([len(proposals)])
-    #
-    # progress[min_index]=1
+    l1= np.linalg.norm(proposals - target_trajectory[ None],ord=1,axis=-1).mean(-1)
+    
+    min_index=np.argmin(l1,axis=0)
+    
+    progress =np.zeros([len(proposals)])
+    
+    progress[min_index]=1
 
     # target_line=np.concatenate([np.zeros([1,2]),target_trajectory[...,:2]])
     #

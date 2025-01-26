@@ -38,7 +38,7 @@ class PadModel(nn.Module):
             ego_status=torch.clamp(ego_status, min=-100, max=100)
 
             if self.training:
-                ego_status[:,1:3]+=torch.randn_like(ego_status[:,1:3])
+                ego_status[:,0:3]+=torch.randn_like(ego_status[:,0:3])
 
         image_feature = self._backbone(camera_feature,img_metas=features)  # b,64,64,64
 

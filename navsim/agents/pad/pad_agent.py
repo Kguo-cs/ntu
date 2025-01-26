@@ -224,7 +224,9 @@ class PadAgent(AbstractAgent):
     def diversity_loss(self, proposals):
         dist = torch.linalg.norm(proposals[:, :, None] - proposals[:, None], dim=-1, ord=1).mean(-1)
 
-        dist = dist + (dist == 0)
+        # dist = dist + (dist == 0)
+
+        dist[dist==0]=10000
 
         inter_loss = -dist.amin(1).amin(1).mean()
 

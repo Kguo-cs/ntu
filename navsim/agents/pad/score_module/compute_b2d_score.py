@@ -111,11 +111,11 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
 
     return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels
 
-def get_sub_score(args):
+def get_scores(args):
 
-    return [get_sub_score1(a["token"],a["poses"],a["target_trajectory"],a["lidar2world"],a["nearby_point"]) for a in args]
+    return [get_sub_score(a["token"],a["poses"],a["target_trajectory"],a["lidar2world"],a["nearby_point"]) for a in args]
 
-def get_sub_score1( fut_corners,proposals,target_trajectory,lidar2world,nearby_point):
+def get_sub_score( fut_corners,proposals,target_trajectory,lidar2world,nearby_point):
 
     proposals_xy=proposals[..., :2]
 

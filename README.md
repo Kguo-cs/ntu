@@ -4,6 +4,7 @@ automan123!!
 qsub -I -l select=1:ngpus=1 -l walltime=48:00:00 -P 12002486
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
+cd /home/users/ntu/lyuchen/scartch/keguo_projects/ntu
 
 # Install
 ```bash
@@ -79,7 +80,8 @@ python Bench2Drive/leaderboard/pad_team_code/b2d_datacache.py
 
 5. train Bench2drive model
 ```bash
-python navsim/planing/script/run_b2d_training.py
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py
+# python navsim/planning/script/run_b2d_training.py
 ```
 
 6. Bench2drive closeloop evaluation

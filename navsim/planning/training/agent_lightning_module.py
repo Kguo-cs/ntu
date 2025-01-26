@@ -89,10 +89,10 @@ class AgentLightningModule(pl.LightningModule):
             pdm_score=predictions["pdm_score"]
             score_error=torch.abs(pdm_score - proposal_scores).mean()
             logging_prefix="val"
-            self.log(f"{logging_prefix}/score", final_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
-            self.log(f"{logging_prefix}/best_score", best_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
-            self.log(f"{logging_prefix}/mean_score", mean_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
-            self.log(f"{logging_prefix}/score_error", score_error, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/score", final_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/best_score", best_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/mean_score", mean_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/score_error", score_error, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
             self.log(f"{logging_prefix}/l2", l2, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
             collision=trajectoy_scores[:,0].mean()

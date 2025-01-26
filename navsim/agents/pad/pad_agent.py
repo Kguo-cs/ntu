@@ -9,12 +9,8 @@ from pathlib import Path
 import pickle
 from navsim.agents.pad.pad_model import PadModel
 from navsim.agents.abstract_agent import AbstractAgent
-from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
 from navsim.planning.training.dataset import load_feature_target_from_pickle
-from nuplan.planning.utils.multithreading.worker_utils import worker_map
-from navsim.agents.transfuser.transfuser_loss import _agent_loss
 from pytorch_lightning.callbacks import ModelCheckpoint
-
 from navsim.common.dataloader import MetricCacheLoader
 from navsim.common.dataclasses import SensorConfig
 from navsim.agents.pad.pad_features import PadTargetBuilder
@@ -38,25 +34,24 @@ class PadAgent(AbstractAgent):
             self._pad_model = PadModel(config)
 
         if not cache_data and self._checkpoint_path == "":#only for training
-
-            self.bce_logit_loss_nomean = nn.BCEWithLogitsLoss(reduction='none')
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
-            self.bce_loss = nn.BCELoss()
-            self.ce_loss = nn.CrossEntropyLoss()
-
-            self.agent_loss=_agent_loss
-
-            self.worker = RayDistributedNoTorch()
-            self.worker_map=worker_map
             self.b2d = config.b2d
+
+            self.ray=False
+
+            if self.ray:
+                from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
+                from nuplan.planning.utils.multithreading.worker_utils import worker_map
+                self.worker = RayDistributedNoTorch()
+                self.worker_map=worker_map
 
             if config.b2d:
                 self.train_metric_cache_paths = load_feature_target_from_pickle(
                     os.getenv("NAVSIM_EXP_ROOT") + "/B2d_cache/train_fut_boxes.gz")
                 self.test_metric_cache_paths = load_feature_target_from_pickle(
                     os.getenv("NAVSIM_EXP_ROOT") + "/B2d_cache/val_fut_boxes.gz")
-                from .score_module.compute_b2d_score import get_sub_score
-                self.get_sub_score = get_sub_score
+                from .score_module.compute_b2d_score import get_scores
+                self.get_scores = get_scores
 
                 map_file ="Bench2DriveZoo/data/infos/b2d_map_infos.pkl"
 
@@ -68,13 +63,13 @@ class PadAgent(AbstractAgent):
                     self.map_infos[town_name] = np.concatenate(value['lane_sample_points'], axis=0)[:, :2]
 
             else:
-                from .score_module.compute_sub_score import get_sub_score
+                from .score_module.compute_navsim_score import get_scores
 
                 metric_cache = MetricCacheLoader(Path(os.getenv("NAVSIM_EXP_ROOT") + "/train_metric_cache"))
                 self.train_metric_cache_paths = metric_cache.metric_cache_paths
                 self.test_metric_cache_paths = metric_cache.metric_cache_paths
 
-                self.get_sub_score = get_sub_score
+                self.get_scores = get_scores
 
     def name(self) -> str:
         """Inherited, see superclass."""
@@ -159,9 +154,10 @@ class PadAgent(AbstractAgent):
                 for token, poses in zip(targets["token"], trajectory)
             ]
 
-        #all_res = self.get_sub_score(data_points)
-
-        all_res = self.worker_map(self.worker, self.get_sub_score, data_points)
+        if self.ray:
+            all_res = self.worker_map(self.worker, self.get_scores, data_points)
+        else:
+            all_res = self.get_scores(data_points)
 
         target_scores = torch.FloatTensor(np.stack([res[0] for res in all_res])).to(proposals.device)
 
@@ -273,22 +269,8 @@ class PadAgent(AbstractAgent):
         else:
             score_loss = score_ce_loss = score_ce_loss1 = ce_loss = l1_loss = ce_area_loss = 0
 
-        if pred["agent_states"] is not None:
-            agent_class_loss, agent_box_loss = self.agent_loss(targets, pred, config)
-        else:
-            agent_class_loss = 0
-            agent_box_loss = 0
-
-        if pred["bev_semantic_map"] is not None:
-            bev_semantic_loss = F.cross_entropy(pred["bev_semantic_map"], targets["bev_semantic_map"].long())
-        else:
-            bev_semantic_loss = 0
-
         loss = (
                 config.trajectory_weight * trajectory_loss
-                + config.agent_class_weight * agent_class_loss
-                + config.agent_box_weight * agent_box_loss
-                + config.bev_semantic_weight * bev_semantic_loss
                 + config.score_weight * score_loss
         )
 
@@ -300,9 +282,6 @@ class PadAgent(AbstractAgent):
         loss_dict = {
             "loss": loss,
             "trajectory_loss": trajectory_loss,
-            "agent_class_loss": agent_class_loss,
-            "agent_box_loss": agent_box_loss,
-            "bev_semantic_loss": bev_semantic_loss,
             "score_loss": score_loss,
             "score": score,
             "best_score": best_score,

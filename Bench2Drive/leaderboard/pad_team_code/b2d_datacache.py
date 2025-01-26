@@ -161,7 +161,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             ann_info = self.data_infos[idx]
 
             ego_vel =ann_info["ego_vel"] [:1]#np.array([ann_info['speed'],0,0])
-            ego_accel = np.linalg.norm(ann_info["ego_accel"][:2])  #np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
+            ego_accel = ann_info["ego_accel"][:2]#np.linalg.norm(ann_info["ego_accel"][:2])  #np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
 
             ego_translation = ann_info['ego_translation']
 
@@ -183,7 +183,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             gt_ego_fut_cmd = ego_fut_cmd.reshape(6)
 
-            features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.zeros(ego_accel),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
+            features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(ego_accel),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
             #features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(local_far_command_xy),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
@@ -286,7 +286,7 @@ if not os.path.exists(cache_path):
 else:
     print(f"Directory '{cache_path}' already exists.")
 
-for type in ['train']  :#,'train','val'
+for type in ['train','val']  :#,'train'
     fut_box = {}
 
     anno_root ="Bench2DriveZoo/data/infos/b2d_"

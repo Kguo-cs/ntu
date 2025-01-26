@@ -34,8 +34,128 @@ from matplotlib.patches import Polygon
 import cv2
 import matplotlib.cm as cm
 
+from navsim.visualization.plots import plot_bev_frame
+from navsim.visualization.plots import plot_bev_with_agent,configure_bev_ax,configure_ax
+from navsim.agents.constant_velocity_agent import ConstantVelocityAgent
+from navsim.visualization.bev import add_configured_bev_on_ax, add_trajectory_to_bev_ax
+from navsim.visualization.config import BEV_PLOT_CONFIG, TRAJECTORY_CONFIG, CAMERAS_PLOT_CONFIG
+from matplotlib.gridspec import GridSpec
+
+from navsim.visualization.camera import _transform_points_to_image,add_lidar_to_camera_ax,_transform_pcs_to_images
+
 proposal_sampling = TrajectorySampling(num_poses=40, interval_length=0.1)
 simulator = PDMSimulator(proposal_sampling)
+
+
+def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_score ):
+    all_traj=np.concatenate([proposals[..., :2], initial_proposals[..., :2],human_poses[None],poses[None,:,:2]],axis=0)
+
+    all_traj=np.concatenate([all_traj[..., :2], np.zeros_like(all_traj)[..., :1]], -1)
+    lidar_pc=all_traj.reshape(-1,3).T
+    image = camera.image.copy()
+
+    image_height, image_width = image.shape[:2]
+
+    pc_in_cam, pc_in_fov_mask = _transform_pcs_to_images(
+        lidar_pc,
+        camera.sensor2lidar_rotation,
+        camera.sensor2lidar_translation,
+        camera.intrinsics,
+        img_shape=(image_height, image_width),
+    )
+
+    pc_in_cam=pc_in_cam.reshape(-1,8,2)
+    pc_in_fov_mask=pc_in_fov_mask.reshape(-1,8)
+
+    config=TRAJECTORY_CONFIG["human"]
+
+    ax.plot(
+        pc_in_cam[-2,:, 0],
+        pc_in_cam[-2,:, 1],
+        color=config["line_color"],
+        alpha=config["line_color_alpha"],
+        linewidth=config["line_width"],
+        linestyle=config["line_style"],
+        marker=config["marker"],
+        markersize=config["marker_size"],
+        markeredgecolor=config["marker_edge_color"],
+        zorder=config["zorder"],
+        label="Human Trajectory"
+    )
+
+
+    config=TRAJECTORY_CONFIG["agent"]#red
+
+    ax.plot(
+        pc_in_cam[-1,:, 0],
+        pc_in_cam[-1,:, 1],
+        color=config["line_color"],
+        alpha=config["line_color_alpha"],
+        linewidth=config["line_width"],
+        linestyle=config["line_style"],
+        marker=config["marker"],
+        markersize=config["marker_size"],
+        markeredgecolor=config["marker_edge_color"],
+        zorder=config["zorder"],
+        label="Planning"
+    )
+
+    for i in range(64):
+        points=pc_in_cam[i]#[pc_in_fov_mask[i],None].reshape(-1,2)
+        color = cm.Reds(pdm_score[i])  # This returns an RGBA color
+        init_points=pc_in_cam[i+64]
+
+        if i==0:
+            ax.plot(
+                points[:, 0],
+                points[:, 1],
+                color=color,
+                linewidth=1,
+                linestyle=config["line_style"],
+                marker='.',
+                markersize=2,
+                zorder=2,
+                label="Proposal"
+            )
+            ax.plot(
+                init_points[:, 0],
+                init_points[:, 1],
+                color="yellow",
+                linewidth=1,
+                linestyle=config["line_style"],
+                marker='.',
+                markersize=2,
+                zorder=2,
+                label="Initial Proposal"
+            )
+        else:
+            ax.plot(
+                points[:, 0],
+                points[:, 1],
+                color=color,
+                alpha=pdm_score[i],
+                linewidth=1,
+                linestyle=config["line_style"],
+                marker='.',
+                markersize=2,
+                # markeredgecolor=config["marker_edge_color"],
+                zorder=2
+            )
+            ax.plot(
+                init_points[:, 0],
+                init_points[:, 1],
+                color='yellow',
+                linewidth=1,
+                linestyle=config["line_style"],
+                marker='.',
+                markersize=2,
+                zorder=2
+            )
+    ax.axis('off')
+    ax.imshow(image)
+
+    ax.legend(loc=1)
+
 
 
 def run_test_evaluation(
@@ -101,93 +221,49 @@ def run_test_evaluation(
         poses = predictions["trajectory"].cpu().numpy()[0,:,:2]
         proposals = predictions["proposals"].cpu().numpy()[0]
         pdm_score = predictions["pdm_score"].cpu().numpy()[0]
+        initial_proposals=predictions["proposal_list"][0].cpu().numpy()[0]
+        human_trajectory = scene.get_future_trajectory(8)
 
-        # scenario = NavSimScenario(scene, map_root=os.environ["NUPLAN_MAPS_ROOT"], map_version="nuplan-maps-v1.0")
+        human_poses = human_trajectory.poses[:, :2]
 
-        # initial_ego_state = scenario.initial_ego_state
+        pred_area = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0].reshape(40,3)
 
-        # trajectory_states=[]
+        MULTIPLE_LANES = pred_area[:,0]
+        NON_DRIVABLE_AREA = pred_area[:,1]
+        ONCOMING_TRAFFIC = pred_area[:,2]
 
-        # for model_trajectory in proposals:
-        #     pred_trajectory = transform_trajectory(Trajectory(model_trajectory), initial_ego_state)
-
-        #     pred_states = get_trajectory_as_array(pred_trajectory, simulator.proposal_sampling,
-        #                                         initial_ego_state.time_point)
-
-        #     trajectory_states.append(pred_states)
-
-        # trajectory_states = np.stack(trajectory_states, axis=0)
-
-        # simulated_states = simulator.simulate_proposals(trajectory_states, initial_ego_state)#32,41,11
-
-        # simulated_traj=simulated_states[:,1:,:2]
-        # theta = initial_ego_state.rear_axle.heading
-        # origin_x = initial_ego_state.rear_axle.x
-        # origin_y = initial_ego_state.rear_axle.y
-
-        # c, s = np.cos(theta), np.sin(theta)
-        # mat = np.array([[c, -s],
-        #                 [s, c]])
-
-        # simulated_traj[...,0]-=origin_x
-        # simulated_traj[...,1]-=origin_y
-    
-        # simulated_traj=simulated_traj.dot(mat)
-    
-        # simulated_traj=simulated_traj.reshape(-1,40,2)
-
-
-        # pred_area_logit = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0]
         pred_agents_states = predictions["pred_agents_states"][0]
 
         pred_agents_label=torch.sigmoid(pred_agents_states[..., -41:]).cpu().numpy()
         pred_agents_corners=pred_agents_states[..., :-41].cpu().numpy()
 
-
-        camera=agent_input.cameras[-1].cam_f0
-        # image0=cam.image
-
-        
-            #     np.maximum(
-            # reference_points_cam[..., 2:3], np.ones_like(reference_points_cam[..., 2:3]) * eps)
-
-        # print(reference_points_cam)
-
-        # for i in range(64):
-        #     #refer_i=reference_points_cam[i][bev_mask[i]]
-        #     plt.plot(reference_points_cam[i,:,0], reference_points_cam[i,:,1], color="red", linewidth=1) 
-
-        from navsim.visualization.plots import plot_bev_frame
-        from navsim.visualization.plots import plot_bev_with_agent,configure_bev_ax,configure_ax
-        from navsim.agents.constant_velocity_agent import ConstantVelocityAgent
-        from navsim.visualization.bev import add_configured_bev_on_ax, add_trajectory_to_bev_ax
-        from navsim.visualization.config import BEV_PLOT_CONFIG, TRAJECTORY_CONFIG, CAMERAS_PLOT_CONFIG
-        from matplotlib.gridspec import GridSpec
-
+        cameras=agent_input.cameras[-1]
         frame_idx = scene.scene_metadata.num_history_frames - 1 # current frame
-        # fig, ax = plot_bev_frame(scene, frame_idx)
-        # plt.show()
-
-        # agent = ConstantVelocityAgent()
-        # fig, ax = plot_bev_with_agent(scene, agent)
-        human_trajectory = scene.get_future_trajectory(8)
-        #agent_trajectory = agent.compute_trajectory(scene.get_agent_input())
 
         frame_idx = scene.scene_metadata.num_history_frames - 1
-        #fig, (ax0 ,ax)= plt.subplots(2, 1, figsize=(5, 6))
-        fig = plt.figure(figsize=(8, 8))
-        gs = GridSpec(2, 1, figure=fig, hspace=0, wspace=0,height_ratios=[0.36,0.64])
+        fig = plt.figure(figsize=(16, 8))
+        gs = GridSpec(2, 3, figure=fig, hspace=0, wspace=0,height_ratios=[0.36,0.64])
 
         # Create axes
-        ax0 = fig.add_subplot(gs[0, 0])
-        ax = fig.add_subplot(gs[1, 0])
 
-        add_configured_bev_on_ax(ax, scene.map_api, scene.frames[frame_idx])
+        ax00 = fig.add_subplot(gs[0, 0])
+        ax10 = fig.add_subplot(gs[1, 0])
+
+        ax01 = fig.add_subplot(gs[0, 1])
+        ax11 = fig.add_subplot(gs[1, 1])
+
+        ax02 = fig.add_subplot(gs[0, 2])
+        ax12 = fig.add_subplot(gs[1, 2])
+
+        plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_l0, ax00,pdm_score )
+        plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_f0, ax01,pdm_score )
+        plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_r0, ax02,pdm_score )
+
+        add_configured_bev_on_ax(ax11, scene.map_api, scene.frames[frame_idx])
 
         config=TRAJECTORY_CONFIG["human"]
 
-        human_poses = human_trajectory.poses[:, :2]
-        ax.plot(
+        ax11.plot(
             human_poses[:, 1],
             human_poses[:, 0],
             color=config["line_color"],
@@ -203,8 +279,7 @@ def run_test_evaluation(
 
         config=TRAJECTORY_CONFIG["agent"]#red
 
-        poses = poses[:, :2]
-        ax.plot(
+        ax11.plot(
             poses[:, 1],
             poses[:, 0],
             color=config["line_color"],
@@ -220,11 +295,12 @@ def run_test_evaluation(
         ttc_marking=True
         col_marking=True
 
+
         for i in range(64):
             proposal=proposals[i]
             color = cm.Reds(pdm_score[i])  # This returns an RGBA color
 
-            ax.plot(
+            ax11.plot(
                 proposal[:, 1],
                 proposal[:, 0],
                 color=color,
@@ -233,6 +309,19 @@ def run_test_evaluation(
                 marker='.',
                 markersize=2,
                 # markeredgecolor=config["marker_edge_color"],
+                zorder=2
+            )
+
+            initial_proposal=initial_proposals[i]
+
+            ax11.plot(
+                initial_proposal[:, 1],
+                initial_proposal[:, 0],
+                color='yellow',
+                linewidth=1,
+                linestyle=config["line_style"],
+                marker='.',
+                markersize=2,
                 zorder=2
             )
 
@@ -266,7 +355,7 @@ def run_test_evaluation(
                                         zorder=2
                                         )
 
-                        ax.add_patch(p)
+                        ax11.add_patch(p)
                         col_marking=False
 
             ttc_label=pred_agents_label[i][1]
@@ -300,178 +389,22 @@ def run_test_evaluation(
                                 facecolor = "None",
                                 zorder=2
                                 )
-                        ax.add_patch(p)
+                        ax11.add_patch(p)
 
-        ax.set_aspect("equal")
+        ax11.set_aspect("equal")
 
         # NOTE: x forward, y sideways
-        ax.set_xlim(-36, 36)
-        ax.set_ylim(-8, 64)
+        ax11.set_xlim(-36, 36)
+        ax11.set_ylim(-8, 64)
 
         # NOTE: left is y positive, right is y negative
-        ax.invert_xaxis()
-        configure_ax(ax)
+        ax11.invert_xaxis()
+        configure_ax(ax11)
 
-        from navsim.visualization.camera import _transform_points_to_image,add_lidar_to_camera_ax,_transform_pcs_to_images
-
-
-        proposals=np.concatenate([ proposals[..., :2],human_poses[None],poses[None,:,:2]],axis=0)
-
-        proposals=np.concatenate([proposals[..., :2], np.zeros_like(proposals)[..., :1]], -1)
-        # frame = scene.frames[frame_idx]
-
-        # add_lidar_to_camera_ax(ax0, camera, frame.lidar)
-        lidar_pc=proposals.reshape(-1,3).T#frame.lidar.lidar_pc.copy()#
-        image = camera.image.copy()
-
-        image_height, image_width = image.shape[:2]
-
-        pc_in_cam, pc_in_fov_mask = _transform_pcs_to_images(
-            lidar_pc,
-            camera.sensor2lidar_rotation,
-            camera.sensor2lidar_translation,
-            camera.intrinsics,
-            img_shape=(image_height, image_width),
-        )
-
-        pc_in_cam=pc_in_cam.reshape(-1,8,2)
-        pc_in_fov_mask=pc_in_fov_mask.reshape(-1,8)
-
-
-
-        config=TRAJECTORY_CONFIG["human"]
-
-        ax0.plot(
-            pc_in_cam[-2,:, 0],
-            pc_in_cam[-2,:, 1],
-            color=config["line_color"],
-            alpha=config["line_color_alpha"],
-            linewidth=config["line_width"],
-            linestyle=config["line_style"],
-            marker=config["marker"],
-            markersize=config["marker_size"],
-            markeredgecolor=config["marker_edge_color"],
-            zorder=config["zorder"],
-            label="Human Trajectory"
-        )
-
-
-        config=TRAJECTORY_CONFIG["agent"]#red
-
-        ax0.plot(
-            pc_in_cam[-1,:, 0],
-            pc_in_cam[-1,:, 1],
-            color=config["line_color"],
-            alpha=config["line_color_alpha"],
-            linewidth=config["line_width"],
-            linestyle=config["line_style"],
-            marker=config["marker"],
-            markersize=config["marker_size"],
-            markeredgecolor=config["marker_edge_color"],
-            zorder=config["zorder"],
-            label="Planning"
-        )
-
-
-        for i in range(64):
-            points=pc_in_cam[i]#[pc_in_fov_mask[i],None].reshape(-1,2)
-            color = cm.Reds(pdm_score[i])  # This returns an RGBA color
-
-            if i==0:
-                ax0.plot(
-                    points[:, 0],
-                    points[:, 1],
-                    color=color,
-                    linewidth=1,
-                    linestyle=config["line_style"],
-                    marker='.',
-                    markersize=2,
-                    zorder=2,
-                    label="Proposal"
-                )
-            else:
-                ax0.plot(
-                    points[:, 0],
-                    points[:, 1],
-                    color=color,
-                    alpha=pdm_score[i],
-                    linewidth=1,
-                    linestyle=config["line_style"],
-                    marker='.',
-                    markersize=2,
-                    # markeredgecolor=config["marker_edge_color"],
-                    zorder=2
-                )
-
-        ax0.axis('off')
-        ax0.legend(loc=1)
-        ax.legend(loc=1)
-
-        ax0.imshow(image)
-
-        # proposals=np.concatenate([proposals[..., :2], np.zeros_like(proposals)[..., :1]], -1)
-
-        # proposal_points, pc_in_fov = _transform_points_to_image(proposals.reshape(-1, 3), camera.intrinsics)
-
-        # proposal_points=proposal_points.reshape(-1,8,2)
-        # pc_in_fov=pc_in_fov.reshape(-1,8)
-        # valid_proposal = pc_in_fov.any(-1)
-
-        # box_corners, box_labels = box_corners[valid_proposal], box_labels[valid_proposal]
-        # image = _plot_rect_3d_on_img(camera.image.copy(), box_corners, box_labels)
-        # image =camera.image.copy()
-        # from PIL import ImageColor
-
-        # color = ImageColor.getcolor("#e15759", "RGB")
-
-        # for i in range(64):
-        #     proposal_points_i=proposal_points[i].astype(np.int)
-            
-        #     for t in range(7):
-        #         cv2.line(
-        #             image,
-        #             (proposal_points_i[t, 0], proposal_points_i[t, 1]),
-        #             (proposal_points_i[t+1, 0], proposal_points_i[t+1, 1]),
-        #             color,
-        #             1,
-        #             cv2.LINE_AA,
-        #         )
+        ax11.legend(loc=1)
 
         plt.tight_layout()
         plt.show()
-
-        # from navsim.visualization.plots import plot_cameras_frame
-
-        # fig, ax = plot_cameras_frame(scene, frame_idx)
-        # plt.show()
-        # from navsim.visualization.plots import plot_cameras_frame_with_annotations
-
-        # fig, ax = plot_cameras_frame_with_annotations(scene, frame_idx)
-        # plt.show()
-        # from navsim.visualization.plots import plot_cameras_frame_with_lidar
-
-        # fig, ax = plot_cameras_frame_with_lidar(scene, frame_idx)
-        # plt.show()
-        # from navsim.visualization.plots import configure_bev_ax
-        # from navsim.visualization.bev import add_annotations_to_bev_ax, add_lidar_to_bev_ax
-
-
-        # fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-
-        # ax.set_title("Custom plot")
-
-        # add_annotations_to_bev_ax(ax, scene.frames[frame_idx].annotations)
-        # add_lidar_to_bev_ax(ax, scene.frames[frame_idx].lidar)
-
-        # # configures frame to BEV view
-        # configure_bev_ax(ax)
-
-        # plt.show()
-
-        # plt.imshow(image0)
-
-        # plt.show()
-
 
     return output
 

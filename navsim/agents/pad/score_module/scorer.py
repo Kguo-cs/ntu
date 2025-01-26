@@ -89,8 +89,8 @@ class Scorer(nn.Module):
                 agent_states = agents[:, :, :-1]
                 agent_labels = agents[:, :, -1]
 
-            if self.area_pred:
-                pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
+        if self.area_pred:
+            pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
 
         if self.agent_pred:
             col_agents_state = self.pred_col_agent(trajectory, keyval)

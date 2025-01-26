@@ -19,12 +19,12 @@ simulator = PDMSimulator(proposal_sampling)
 config = PDMScorerConfig( )
 scorer = PDMScorer(proposal_sampling, config)
 
-def get_sub_score(args):
+def get_scores(args):
 
-    return [get_sub_score1(a["token"],a["poses"],a["test"]) for a in args]
+    return [get_sub_score(a["token"],a["poses"],a["test"]) for a in args]
 
 
-def get_sub_score1( metric_cache,poses,test):
+def get_sub_score( metric_cache,poses,test):
 
     with lzma.open(metric_cache, "rb") as f:
         metric_cache = pickle.load(f)

@@ -28,9 +28,6 @@ class AgentLightningModule(pl.LightningModule):
         :return: scalar loss
         """
         features, targets = batch
-        #features["trajectory"]=targets["trajectory"]
-        # features["current_epoch"]=self.trainer.current_epoch
-        # targets["current_epoch"]=self.trainer.current_epoch
 
         prediction = self.agent.forward(features)
         loss_dict = self.agent.compute_loss(features, targets, prediction)
@@ -38,29 +35,9 @@ class AgentLightningModule(pl.LightningModule):
         if type(loss_dict) is dict:
             for key,value in loss_dict.items():
                 self.log(f"{logging_prefix}/"+key, value, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
-
             return loss_dict["loss"]
         else:
             return loss_dict
-
-
-    # def on_train_epoch_start(self) -> None:
-    #     # if self.trainer.current_epoch==self.agent.learn_epoch:
-    #     #     self.trainer.optimizers=[torch.optim.Adam(self.agent._pad_model.parameters(), lr=0.0001)]
-    #
-    #     if self.agent.opt_traj:
-    #
-    #         gather_scores = [torch.zeros_like(self.agent.best_score)  for dev_idx in range(torch.cuda.device_count())]
-    #
-    #         dist.all_gather(gather_scores, self.agent.best_score)
-    #
-    #         gather_trajs = [torch.zeros_like(self.agent.best_traj) for dev_idx in range(torch.cuda.device_count())]
-    #         dist.all_gather(gather_trajs, self.agent.best_traj)
-    #
-    #         for gather_score,gather_traj in zip(gather_scores,gather_trajs):
-    #             improve=gather_score>self.agent.best_score
-    #             self.agent.best_score[improve] = gather_score[improve]
-    #             self.agent.best_traj[improve]=gather_traj[improve]
 
     def training_step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], batch_idx: int) -> Tensor:
         """
@@ -79,7 +56,7 @@ class AgentLightningModule(pl.LightningModule):
         :param batch_idx: index of batch (ignored)
         :return: scalar loss
         """
-        if 'Bev' in self.agent.name():
+        if 'Pad' in self.agent.name():
             features, targets = batch
             # score,best_score=self.agent.inference(features, targets)
             predictions = self.agent.forward(features)
@@ -89,7 +66,7 @@ class AgentLightningModule(pl.LightningModule):
             pdm_score=predictions["pdm_score"]
             score_error=torch.abs(pdm_score - proposal_scores).mean()
             logging_prefix="val"
-            self.log(f"{logging_prefix}/score", final_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/score", final_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
             self.log(f"{logging_prefix}/best_score", best_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
             self.log(f"{logging_prefix}/mean_score", mean_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
             self.log(f"{logging_prefix}/score_error", score_error, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)

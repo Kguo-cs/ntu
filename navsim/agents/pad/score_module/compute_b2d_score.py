@@ -29,8 +29,7 @@ def compute_corners(boxes):
 
     return corners
 
-ego_width, ego_length = 1.8367133140563965, 4.89238166809082
-
+ego_width, ego_length = 0.925*2, 2.042*2
 
 def eval_single(ego_corners,fut_corners,fut_mask):
 

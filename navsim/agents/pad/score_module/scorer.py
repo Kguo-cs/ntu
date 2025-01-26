@@ -12,7 +12,7 @@ class Scorer(nn.Module):
 
         self.batch=False
 
-        self.proposal_num=config.proposal_num#+1
+        self.proposal_num=config.proposal_num
         self.score_num = 6
         num_poses = config.num_poses
 
@@ -24,7 +24,7 @@ class Scorer(nn.Module):
         if self.batch:
             input_dim=state_size
         else:
-            input_dim=state_size* num_poses #40 * 11#state_sizestate_size*
+            input_dim=state_size* num_poses 
 
         self.pred_score = MyTransformeDecoder(config,input_dim,self.score_num )
 
@@ -89,12 +89,12 @@ class Scorer(nn.Module):
                 agent_states = agents[:, :, :-1]
                 agent_labels = agents[:, :, -1]
 
-        if self.area_pred:
-            pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
+            if self.area_pred:
+                pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
 
-        if self.agent_pred:
-            col_agents_state = self.pred_col_agent(trajectory, keyval)
-            ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
-            pred_agents_states = torch.stack([ttc_agents_state, col_agents_state], dim=2)
+            if self.agent_pred:
+                col_agents_state = self.pred_col_agent(trajectory, keyval)
+                ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
+                pred_agents_states = torch.stack([ttc_agents_state, col_agents_state], dim=2)
 
         return pred_logit,pred_logit2, pred_agents_states, pred_area_logit,bev_semantic_map,agent_states,agent_labels

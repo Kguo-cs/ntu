@@ -34,8 +34,8 @@ class PadModel(nn.Module):
 
         batch_size = ego_status.shape[0]
 
-        # if self.b2d:
-        #     ego_status=torch.clamp(ego_status, min=-100, max=100)
+        if self.b2d:
+            ego_status=torch.clamp(ego_status, min=-100, max=100)
 
         image_feature = self._backbone(camera_feature,img_metas=features)  # b,64,64,64
 

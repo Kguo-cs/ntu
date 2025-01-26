@@ -29,7 +29,7 @@ class PadModel(nn.Module):
         self.b2d=config.b2d
 
     def forward(self, features: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        ego_status: torch.Tensor = features["ego_status"]
+        ego_status: torch.Tensor = features["ego_status"][:,-1]
         camera_feature: torch.Tensor = features["camera_feature"]
 
         batch_size = ego_status.shape[0]
@@ -37,13 +37,14 @@ class PadModel(nn.Module):
         if self.b2d:
             ego_status=torch.clamp(ego_status, min=-100, max=100)
 
+            if self.training:
+                ego_status[:,1:3]+=torch.randn_like(ego_status[:,1:3])
+
         image_feature = self._backbone(camera_feature,img_metas=features)  # b,64,64,64
 
         output={}
 
-        cur_state=ego_status[:,-1]
-
-        keyval=self.hist_encoding(cur_state)[:,None]
+        keyval=self.hist_encoding(ego_status)[:,None]
 
         proposal_list = []
         for i, refine in enumerate(self._trajectory_head):

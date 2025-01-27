@@ -5,7 +5,11 @@ qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
+conda activate pad
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d_noaccspeed.log 2>&1 & tail -f B2d_noaccspeed.log
 
+qstat -ans
+export PBS_JOBID=24445.pbs111
 # Install
 ```bash
 conda create -n pad python=3.8
@@ -80,7 +84,7 @@ python Bench2Drive/leaderboard/pad_team_code/b2d_datacache.py
 
 5. train Bench2drive model
 ```bash
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py 
 # python navsim/planning/script/run_b2d_training.py
 ```
 

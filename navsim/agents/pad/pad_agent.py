@@ -37,12 +37,12 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=False
+            self.ray=True
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
-                self.worker = RayDistributedNoTorch()
+                self.worker = RayDistributedNoTorch(threads_per_node=4)
                 self.worker_map=worker_map
 
             if config.b2d:

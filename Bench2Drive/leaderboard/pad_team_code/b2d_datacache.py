@@ -187,7 +187,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             #features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(local_far_command_xy),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
-            features["camera_feature"] = img[:4].to(torch.float16)
+            features["camera_feature"] = img[:4]
 
             image_shape= np.zeros([1,2])
 
@@ -277,7 +277,7 @@ def my_collate(batch):
     return batch
 
 data_root="Bench2DriveZoo/data/bench2drive"
-cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache/"
+cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache32/"
 
 if not os.path.exists(cache_path):
     # Create the directory
@@ -299,7 +299,7 @@ for type in ['train','val']  :#,'train'
 
     nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality)
 
-    data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=12,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
+    data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=64,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
 
     for  data in tqdm(data_loader):
         for key,value in data[0].items():

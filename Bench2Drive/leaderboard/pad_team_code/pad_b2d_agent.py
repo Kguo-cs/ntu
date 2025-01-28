@@ -332,13 +332,13 @@ class padAgent(autonomous_agent.AutonomousAgent):
         img_metas=input_data_batch["img_metas"][0][0]
 
         gt_ego_fut_cmd=input_data_batch['ego_fut_cmd'][0][0][0][0]
-        #acc = np.linalg.norm(ego_accel[ :2])  # np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
+        acc =ego_accel[ :2]  #np.linalg.norm(ego_accel[ :2])  # np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
 
         device=gt_ego_fut_cmd.device
 
         features={}
         features["ego_status"] = torch.cat(
-            [torch.tensor(np.array([speed])).to(device), torch.zeros([1]).to(device), torch.tensor(local_command_xy).to(device), gt_ego_fut_cmd, torch.zeros([1]).to(device)])[None,None].to(torch.float32)
+            [torch.tensor(np.array([speed])).to(device),torch.tensor(acc).to(device),  torch.tensor(local_command_xy).to(device), gt_ego_fut_cmd])[None,None].to(torch.float32)
 
         img=input_data_batch["img"][0]
         features["camera_feature"] = img[:,:4]

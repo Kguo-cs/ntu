@@ -6,10 +6,12 @@ qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 conda activate pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d_noaccspeed.log 2>&1 & tail -f B2d_noaccspeed.log
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d_b64_speedlocalacc1_clip15.log 2>&1 & tail -f B2d_b64_speedlocalacc1_clip15.log
 
 qstat -ans
 export PBS_JOBID=24445.pbs111
+echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
+
 # Install
 ```bash
 conda create -n pad python=3.8
@@ -51,7 +53,8 @@ python navsim/planning/script/run_dataset_caching.py
 python navsim/planing/script/run_training.py
 ```
 4. test navsim model
-Enter the checkpoint path into navsim/planning/script/config/common/agent/navsim_agent.yaml
+
+Change the checkpoint path in [agent_config](navsim/planning/script/config/common/agent/navsim_agent.yaml)
 ```bash
 python navsim/planing/script/run_create_submission_pickle.py
 ```
@@ -63,8 +66,7 @@ Then, submit the created "submission.pkl" to the [official leaderboard](https://
 ```bash
 huggingface-cli download --repo-type dataset --resume-download rethinklab/Bench2Drive --local-dir Bench2Drive-Base
 ```
-
-2. Download and setup CARLA 0.9.15
+2. download and setup CARLA 0.9.15
 ```bash
     mkdir carla
     cd carla
@@ -88,7 +90,7 @@ python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2
 # python navsim/planning/script/run_b2d_training.py
 ```
 
-6. Bench2drive closeloop evaluation
+6. closeloop evaluation
 ```bash
 cd Bench2Drive
 python leaderboard/leaderboard/pad_eval.py

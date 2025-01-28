@@ -42,7 +42,7 @@ class PadAgent(AbstractAgent):
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
-                self.worker = RayDistributedNoTorch(threads_per_node=4)
+                self.worker = RayDistributedNoTorch(threads_per_node=8)
                 self.worker_map=worker_map
 
             if config.b2d:
@@ -224,9 +224,9 @@ class PadAgent(AbstractAgent):
     def diversity_loss(self, proposals):
         dist = torch.linalg.norm(proposals[:, :, None] - proposals[:, None], dim=-1, ord=1).mean(-1)
 
-        # dist = dist + (dist == 0)
+        dist = dist + (dist == 0)
 
-        dist[dist==0]=10000
+        #dist[dist==0]=10000
 
         inter_loss = -dist.amin(1).amin(1).mean()
 

@@ -35,13 +35,17 @@ class PadModel(nn.Module):
         batch_size = ego_status.shape[0]
 
         if self.b2d:
-            ego_status=torch.clamp(ego_status, min=-100, max=100)
-            ego_status[:,:3]=0
+            
+            if self.training:
+                ego_status[:,:5]+=torch.randn_like(ego_status[:,:5])
+                
+            ego_status[:,1:5]=0
 
-            # if self.training:
+            ego_status=torch.clamp(ego_status, min=-15, max=15)
+            # ego_status[:,:1]=torch.clamp(ego_status[:,:1], min=0, max=15)
+
             # ego_status[:,1:3]+=torch.randn_like(ego_status[:,1:3])
             # ego_status[:,:1]+=torch.randn_like(ego_status[:,:1])
-            # ego_status[:,:1]=torch.clamp(ego_status[:,:1], min=0, max=16)
 
         image_feature = self._backbone(camera_feature,img_metas=features)  # b,64,64,64
 

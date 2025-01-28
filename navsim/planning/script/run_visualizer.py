@@ -120,7 +120,7 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
             ax.plot(
                 init_points[:, 0],
                 init_points[:, 1],
-                color="yellow",
+                color="#edc948",
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -144,7 +144,7 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
             ax.plot(
                 init_points[:, 0],
                 init_points[:, 1],
-                color='yellow',
+                color='#edc948',
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -154,7 +154,6 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
     ax.axis('off')
     ax.imshow(image)
 
-    ax.legend(loc=1)
 
 
 
@@ -226,11 +225,10 @@ def run_test_evaluation(
 
         human_poses = human_trajectory.poses[:, :2]
 
-        pred_area = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0].reshape(40,3)
+        pred_area = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0].reshape(-1,40,3)
 
-        MULTIPLE_LANES = pred_area[:,0]
-        NON_DRIVABLE_AREA = pred_area[:,1]
-        ONCOMING_TRAFFIC = pred_area[:,2]
+        on_road=1-pred_area[:,::5,-2]
+        on_route=1-pred_area[:,::5,-1]
 
         pred_agents_states = predictions["pred_agents_states"][0]
 
@@ -241,7 +239,7 @@ def run_test_evaluation(
         frame_idx = scene.scene_metadata.num_history_frames - 1 # current frame
 
         frame_idx = scene.scene_metadata.num_history_frames - 1
-        fig = plt.figure(figsize=(16, 8))
+        fig = plt.figure(figsize=(15, 8))
         gs = GridSpec(2, 3, figure=fig, hspace=0, wspace=0,height_ratios=[0.36,0.64])
 
         # Create axes
@@ -255,11 +253,65 @@ def run_test_evaluation(
         ax02 = fig.add_subplot(gs[0, 2])
         ax12 = fig.add_subplot(gs[1, 2])
 
+        points=proposals[...,:2].reshape(-1,2)
+
+        on_road=on_road.reshape(-1)
+        on_route=on_route.reshape(-1)
+
+        for i in range(len(on_road)):
+
+            color = cm.Reds(on_road[i])  # This returns an RGBA color
+
+            if i ==0:
+                ax10.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2,
+                    label='On-road Prediction'
+                )
+            else:
+                ax10.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2
+                )
+
+            color = cm.Reds(on_route[i])  # This returns an RGBA color
+
+            if i ==0:
+                ax12.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2,
+                    label='On-route Prediction'
+                )
+            else:
+                ax12.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2
+                )
+
+
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_l0, ax00,pdm_score )
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_f0, ax01,pdm_score )
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_r0, ax02,pdm_score )
 
+        add_configured_bev_on_ax(ax10, scene.map_api, scene.frames[frame_idx])
         add_configured_bev_on_ax(ax11, scene.map_api, scene.frames[frame_idx])
+        add_configured_bev_on_ax(ax12, scene.map_api, scene.frames[frame_idx])
 
         config=TRAJECTORY_CONFIG["human"]
 
@@ -317,7 +369,7 @@ def run_test_evaluation(
             ax11.plot(
                 initial_proposal[:, 1],
                 initial_proposal[:, 0],
-                color='yellow',
+                color='#edc948',
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -391,20 +443,34 @@ def run_test_evaluation(
                                 )
                         ax11.add_patch(p)
 
-        ax11.set_aspect("equal")
+        ax10.set_aspect("equal")
+        ax10.set_xlim(-36, 36)
+        ax10.set_ylim(-8, 64)
+        ax10.invert_xaxis()
+        configure_ax(ax10)
 
-        # NOTE: x forward, y sideways
+        ax11.set_aspect("equal")
         ax11.set_xlim(-36, 36)
         ax11.set_ylim(-8, 64)
-
-        # NOTE: left is y positive, right is y negative
         ax11.invert_xaxis()
         configure_ax(ax11)
 
+        ax12.set_aspect("equal")
+        ax12.set_xlim(-36, 36)
+        ax12.set_ylim(-8, 64)
+        ax12.invert_xaxis()
+        configure_ax(ax12)
+
+        ax01.legend(loc=1)
+        ax10.legend(loc=1)
         ax11.legend(loc=1)
+        ax12.legend(loc=1)
 
         plt.tight_layout()
-        plt.show()
+
+        plt.savefig('exp/navsim_test/'+str(token)+'.png')  # Saves as a PNG file
+        plt.savefig('exp/navsim_test/'+str(token)+'.pdf')  # Saves as a PNG file
+        plt.close()
 
     return output
 

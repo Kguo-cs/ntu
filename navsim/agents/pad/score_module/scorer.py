@@ -73,9 +73,6 @@ class Scorer(nn.Module):
         p_size=proposals.shape[1]
         t_size=proposals.shape[2]
 
-        proposals=torch.zeros_like(proposals)
-        proposals[...,-1]+=np.pi/2
-
         if self.score_bev:
             keyval = self.Bev_refiner(proposals, keyval, image_feature)
 

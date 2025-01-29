@@ -161,9 +161,9 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
 
     ego_areas=np.stack([on_road_all,on_route_all],axis=-1)
 
-    l1= np.linalg.norm(proposals - target_trajectory[ None],ord=1,axis=-1).mean(-1)
+    l2= np.linalg.norm(proposals[...,:2] - target_trajectory[ None,...,:2],axis=-1).mean(-1)
     
-    min_index=np.argmin(l1,axis=0)
+    min_index=np.argmin(l2,axis=0)
     
     progress =np.zeros([len(proposals)])
     

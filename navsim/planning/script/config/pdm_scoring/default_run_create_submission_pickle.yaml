@@ -10,7 +10,7 @@ hydra:
 defaults:
   - default_common
   - default_evaluation
-  - agent: pad_agent
+  - agent: navsim_agent
   - _self_
   - override train_test_split: navtest
 

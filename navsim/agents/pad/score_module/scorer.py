@@ -10,7 +10,7 @@ class Scorer(nn.Module):
 
         self.score_bev = config.score_bev
 
-        self.batch=False
+        self.b2d=config.b2d
 
         self.proposal_num=config.proposal_num
         self.score_num = 6
@@ -21,10 +21,7 @@ class Scorer(nn.Module):
         if self.score_bev:
             self.Bev_refiner=Bev_refiner(config,self.proposal_num,num_poses,proposal_query=config.score_proposal_query)
 
-        if self.batch:
-            input_dim=state_size
-        else:
-            input_dim=state_size* num_poses 
+        input_dim=state_size* num_poses 
 
         self.pred_score = MyTransformeDecoder(config,input_dim,self.score_num )
 
@@ -47,11 +44,18 @@ class Scorer(nn.Module):
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            self.pred_area = nn.Sequential(
-                nn.Linear(d_model, d_ffn),
-                nn.ReLU(),
-                nn.Linear(d_ffn,5*3),
-            )
+            if self.b2d:
+                self.pred_area = nn.Sequential(
+                    nn.Linear(d_model, d_ffn),
+                    nn.ReLU(),
+                    nn.Linear(d_ffn,2),
+                )
+            else:
+                self.pred_area = nn.Sequential(
+                    nn.Linear(d_model, d_ffn),
+                    nn.ReLU(),
+                    nn.Linear(d_ffn,5*3),
+                )
 
         self.bev_map=config.bev_map
         self.bev_agent=config.bev_agent

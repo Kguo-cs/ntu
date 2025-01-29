@@ -78,9 +78,7 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
 
     proposals=np.stack([proposals,proposals_05],axis=2)#,proposals_10
 
-    n_proposal = proposals.shape[0]
-
-    ego_box = np.zeros((n_proposal,n_future,proposals.shape[2], 5))
+    ego_box = np.zeros((proposals.shape[0],n_future,proposals.shape[2], 5))
 
     heading= proposals[...,2]
 
@@ -90,9 +88,11 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
     ego_box[..., 3] = ego_length
     ego_box[..., 4] = proposals[...,2]
 
-    ego_corners=compute_corners(ego_box.reshape(-1,5)).reshape(n_proposal,n_future,proposals.shape[2],4,2)
+    ego_corners=compute_corners(ego_box.reshape(-1,5)).reshape(-1,n_future,proposals.shape[2],4,2)
 
     num_col=2
+    n_proposal = proposals.shape[0]-1
+
 
     key_agent_corners = np.zeros([n_proposal,num_col, 6, 4, 2])
     key_agent_labels = np.zeros([n_proposal,num_col, 6],dtype=bool)
@@ -108,35 +108,58 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
         key_agent_corners[i,1,:len(ttc_agent_i)]=ttc_agent_i
         key_agent_labels[i,1,:len(ttc_agent_mask_i)]=ttc_agent_mask_i
 
-    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels
+    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels,ego_corners[:,:,0]
 
 def get_scores(args):
 
     return [get_sub_score(a["token"],a["poses"],a["target_trajectory"],a["lidar2world"],a["nearby_point"]) for a in args]
 
-def get_sub_score( fut_corners,proposals,target_trajectory,lidar2world,nearby_point):
+def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearby_point):
 
-    proposals_xy=proposals[..., :2]
+    fut_mask=fut_box_corners.all(-1).all(-1)
+
+    all_proposals=np.concatenate([target_trajectory[None],proposals],axis=0)
+
+    collsions,ttc_collision,key_agent_corners,key_agent_labels,ego_corners=evaluate_coll(all_proposals,fut_box_corners,fut_mask)
+
+    collision=1-collsions.any(-1)
+
+    ttc=1-ttc_collision.any(-1)
 
     z = lidar2world[2, 3]
 
-    proposals_xyz=np.concatenate([proposals_xy,np.zeros_like(proposals_xy[...,:1])+z,np.ones_like(proposals_xy[...,:1])],axis=-1)
+    ego_corners=np.concatenate([ego_corners, all_proposals[:,:,None,:2]],axis=-2)
 
-    global_proposals =np.einsum("ij,ntj->nti",lidar2world,proposals_xyz)[...,:2]
+    ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1])+z,np.ones_like(ego_corners[...,:1])],axis=-1)
 
-    #global_proposals = proposals[..., :2] + xy[None, None]
+    global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
 
-    #nearby_point=np.concatenate([target_trajectory[...,:2]+xy,nearby_point],axis=0)
+    center_xy=nearby_point[:,:2]
+    center_width=nearby_point[:,2]
+    #center_heading=nearby_point[:,3]
+    center_laneid=nearby_point[:,4]
 
-    dist = np.linalg.norm(global_proposals[None] - nearby_point[:, None, None], axis=-1)
+    dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
 
-    min_dist = dist.min(0)
+    on_road=dist_to_center[:,1:]<center_width[:,None,None,None]
 
-    # l2=np.linalg.norm(proposals[...,:2] - target_trajectory[...,:2] [ None],axis=-1)
+    on_road_all=on_road.any(0).all(-1)
 
-    # l2_2s=l2[:,:4].mean(-1)
+    nearest_road=np.argmin(dist_to_center-center_width[:,None,None,None],axis=0)
 
-    # progress=np.exp(-l2_2s/5)
+    nearest_lane_id=center_laneid[nearest_road]
+
+    nearest_road_id=nearest_lane_id.astype(int)
+
+    target_road_id=np.unique(nearest_road_id[0]) 
+
+    proposal_center_road_id=nearest_road_id[1:,:,-1]
+
+    on_route_all=np.isin(proposal_center_road_id, target_road_id) 
+
+    drivable_area_compliance=on_road_all.all(-1) & on_route_all.all(-1)
+
+    ego_areas=np.stack([on_road_all,on_route_all],axis=-1)
 
     l1= np.linalg.norm(proposals - target_trajectory[ None],ord=1,axis=-1).mean(-1)
     
@@ -146,51 +169,23 @@ def get_sub_score( fut_corners,proposals,target_trajectory,lidar2world,nearby_po
     
     progress[min_index]=1
 
-    # target_line=np.concatenate([np.zeros([1,2]),target_trajectory[...,:2]])
-    #
-    # centerline=linestrings(target_line)
-    #
-    # progress_in_meter=np.zeros([len(proposals)])
-    #
-    # for proposal_idx,proposal in enumerate(proposals[...,:2]):
-    #     start_point = Point(proposal[0])
-    #     end_point = Point(proposal[-1])
-    #     progress = centerline.project([start_point, end_point])
-    #     progress_in_meter[proposal_idx] = progress[1] - progress[0]
-    #
-    # progress = np.clip(progress_in_meter, a_min=0, a_max=1)
+    proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
 
-    on_road = min_dist < 3.5
-
-    ego_areas=min_dist[:,:,None]>np.arange(2,3.5,0.1)[None,None] #np.stack([min_dist>4,min_dist>3,min_dist>2],axis=-1)
-
-    drivable_area_compliance=on_road.all(-1)
-
-    fut_mask=fut_corners.all(-1).all(-1)
-
-    collsions,ttc_collision,key_agent_corners,key_agent_labels=evaluate_coll(proposals,fut_corners,fut_mask)
-
-    collision=1-collsions.any(-1)
-
-    ttc=1-ttc_collision.any(-1)
-
-    proposals=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
-
-    vel=(proposals[:,1:,:2]-proposals[:,:-1,:2])/0.5
+    vel=(proposals_xy[:,1:,:2]-proposals_xy[:,:-1,:2])/0.5
 
     acc=np.linalg.norm(vel[:,1:]-vel[:,:-1],axis=-1)/0.5
 
-    angle=np.arctan2(vel[:,:,1], vel[:,:,0])
+    # angle=np.arctan2(vel[:,:,1], vel[:,:,0])
 
-    heading=np.concatenate([np.zeros_like(angle[:,:1])+np.pi/2,angle],axis=1)
+    # heading=np.concatenate([np.zeros_like(angle[:,:1])+np.pi/2,angle],axis=1)
 
-    yaw_rate=(heading[:,1:]-heading[:,:-1])/0.5
+    # yaw_rate=(heading[:,1:]-heading[:,:-1])/0.5
     
-    yaw_accel=(yaw_rate[:,1:]-yaw_rate[:,:-1])/0.5
+    # yaw_accel=(yaw_rate[:,1:]-yaw_rate[:,:-1])/0.5
 
-    desired_speed=np.linalg.norm(vel,axis=-1).mean(-1)
+    # desired_speed=np.linalg.norm(vel,axis=-1).mean(-1)
     
-    comfort=(acc<8).all(-1) & (desired_speed<15) & (np.abs(yaw_rate)<1).all(-1) & (np.abs(yaw_accel)<2).all(-1)
+    comfort=(acc<10).all(-1) #& (desired_speed<15) & (np.abs(yaw_rate)<2).all(-1) & (np.abs(yaw_accel)<4).all(-1)
 
     progress=collision*drivable_area_compliance*progress
 
@@ -205,3 +200,25 @@ def get_sub_score( fut_corners,proposals,target_trajectory,lidar2world,nearby_po
     return target_scores,key_agent_corners,key_agent_labels,ego_areas
 
 
+
+    # target_line=np.concatenate([np.zeros([1,2]),target_trajectory[...,:2]])
+    #
+    # centerline=linestrings(target_line)
+    #
+    # progress_in_meter=np.zeros([len(proposals)])
+    #
+    # for proposal_idx,proposal in enumerate(proposals[...,:2]):
+    #     start_point = Point(proposal[0])
+    #     end_point = Point(proposal[-1])
+    #     progress = centerline.project([start_point, end_point])
+    #     progress_in_meter[proposal_idx] = progress[1] - progress[0]
+    #
+    # progress = np.clip(progress_in_meter, a_min=0, a_max=1)
+       
+
+
+    # l2=np.linalg.norm(proposals[...,:2] - target_trajectory[...,:2] [ None],axis=-1)
+
+    # l2_2s=l2[:,:4].mean(-1)
+
+    # progress=np.exp(-l2_2s/5)

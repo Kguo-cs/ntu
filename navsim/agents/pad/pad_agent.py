@@ -37,7 +37,7 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=True
+            self.ray=False
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
@@ -53,15 +53,10 @@ class PadAgent(AbstractAgent):
                 from .score_module.compute_b2d_score import get_scores
                 self.get_scores = get_scores
 
-                map_file ="Bench2DriveZoo/data/infos/b2d_map_infos.pkl"
+                map_file ="Bench2DriveZoo/data/infos/map.pkl"
 
                 with open(map_file, 'rb') as f:
-                    map_infos = pickle.load(f)
-
-                self.map_infos = {}
-                for town_name, value in map_infos.items():
-                    self.map_infos[town_name] = np.concatenate(value['lane_sample_points'], axis=0)[:, :2]
-
+                    self.map_infos = pickle.load(f)
             else:
                 from .score_module.compute_navsim_score import get_scores
 
@@ -132,7 +127,7 @@ class PadAgent(AbstractAgent):
 
                 xy=lidar2world[0:2, 3]
 
-                dist_to_cur = np.linalg.norm(all_lane_points - xy, axis=-1)
+                dist_to_cur = np.linalg.norm(all_lane_points[:,:2] - xy, axis=-1)
 
                 nearby_point = all_lane_points[dist_to_cur < 50]
 

@@ -10,6 +10,8 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig
 from tqdm import tqdm
 from navsim.common.dataclasses import SensorConfig
+from nuplan.common.actor_state.state_representation import StateSE2
+from nuplan.common.actor_state.vehicle_parameters import get_pacifica_parameters
 
 from navsim.agents.abstract_agent import AbstractAgent
 from navsim.common.dataclasses import Trajectory, SceneFilter
@@ -37,11 +39,15 @@ import matplotlib.cm as cm
 from navsim.visualization.plots import plot_bev_frame
 from navsim.visualization.plots import plot_bev_with_agent,configure_bev_ax,configure_ax
 from navsim.agents.constant_velocity_agent import ConstantVelocityAgent
-from navsim.visualization.bev import add_configured_bev_on_ax, add_trajectory_to_bev_ax
-from navsim.visualization.config import BEV_PLOT_CONFIG, TRAJECTORY_CONFIG, CAMERAS_PLOT_CONFIG
+from navsim.visualization.bev import add_configured_bev_on_ax, add_trajectory_to_bev_ax,add_oriented_box_to_bev_ax
+from navsim.visualization.config import BEV_PLOT_CONFIG, TRAJECTORY_CONFIG, CAMERAS_PLOT_CONFIG,ELLIS_5
 from matplotlib.gridspec import GridSpec
 
 from navsim.visualization.camera import _transform_points_to_image,add_lidar_to_camera_ax,_transform_pcs_to_images
+from nuplan.common.actor_state.car_footprint import CarFootprint
+from navsim.visualization.config import BEV_PLOT_CONFIG, MAP_LAYER_CONFIG, AGENT_CONFIG, LIDAR_CONFIG
+from nuplan.common.actor_state.tracked_objects_types import TrackedObjectType
+from nuplan.common.geometry.transform import translate_longitudinally
 
 proposal_sampling = TrajectorySampling(num_poses=40, interval_length=0.1)
 simulator = PDMSimulator(proposal_sampling)
@@ -120,7 +126,7 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
             ax.plot(
                 init_points[:, 0],
                 init_points[:, 1],
-                color="yellow",
+                color="#edc948",
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -144,7 +150,7 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
             ax.plot(
                 init_points[:, 0],
                 init_points[:, 1],
-                color='yellow',
+                color='#edc948',
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -154,8 +160,79 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
     ax.axis('off')
     ax.imshow(image)
 
-    ax.legend(loc=1)
+def plot_bev(scene,frame_idx):
 
+    rel_pose=scene.rel_pose
+    frame = scene.frames[frame_idx]
+
+    fig, ax = plt.subplots(figsize=CAMERAS_PLOT_CONFIG["figure_size"])
+    if frame_idx>3:
+        pos=rel_pose[frame_idx-4]
+
+        car_footprint = CarFootprint.build_from_rear_axle(
+            rear_axle_pose=StateSE2(pos[0], pos[1], pos[2]),
+            vehicle_parameters=get_pacifica_parameters(),
+        )
+
+        config= {
+                "fill_color":  "#B0E685",
+                "fill_color_alpha": 0.5,
+                "line_color": "black",
+                "line_color_alpha":1.0,
+                "line_width": 1.0,
+                "line_style": "--",
+                "zorder": 4,
+            }
+        
+        box=car_footprint.oriented_box
+        add_heading=True
+
+        box_corners = box.all_corners()
+        corners = [[corner.x, corner.y] for corner in box_corners]
+        corners = np.asarray(corners + [corners[0]])
+
+        corners=corners[:,::-1]
+
+        polygon = Polygon(
+            corners, 
+            closed=True, 
+            facecolor=config["fill_color"], 
+            edgecolor=config["line_color"], 
+            linewidth=config["line_width"], 
+            linestyle=config["line_style"], 
+            alpha=config["fill_color_alpha"], 
+            zorder=config["zorder"],
+            label="Planning Poses"
+        )
+
+        # Add the polygon to the axes
+        ax.add_patch(polygon)
+
+        if add_heading:
+            future = translate_longitudinally(box.center, distance=box.length / 2 + 1)
+            line = np.array([[box.center.x, box.center.y], [future.x, future.y]])
+            ax.plot(
+                line[:, 1],
+                line[:, 0],
+                color=config["line_color"],
+                alpha=config["line_color_alpha"],
+                linewidth=config["line_width"],
+                linestyle=config["line_style"],
+                zorder=config["zorder"],
+            )
+        ax.legend(loc=1)
+
+
+    add_configured_bev_on_ax(ax, scene.map_api, frame)
+    ax.set_aspect("equal")
+    ax.set_xlim(-36, 36)
+    ax.set_ylim(-8, 64)
+    ax.invert_xaxis()
+    fig.suptitle(str(frame_idx*0.5-1.5)+' s', fontsize=16)
+    configure_ax(ax)
+    plt.tight_layout()
+
+    return fig,ax
 
 
 def run_test_evaluation(
@@ -180,7 +257,7 @@ def run_test_evaluation(
         data_path=data_path,
         scene_filter=scene_filter,
         sensor_blobs_path=sensor_blobs_path,
-        sensor_config=SensorConfig.build_all_sensors(include=[3]),
+        sensor_config=SensorConfig.build_all_sensors(include=[3])
     )
     agent.initialize()
 
@@ -194,9 +271,14 @@ def run_test_evaluation(
         # try:
         # if token not in ["51e697d3f5255ac3","83212ddd15375812", "fc6dc98b89a95817", "dabc9043dbb9560b", "ce516bdfc6e45d5b"]:
         #     continue
-        print(token)
+        # print(token)
+        # from navsim.visualization.plots import plot_cameras_frame_with_annotations
 
         scene=input_loader.get_scene_from_token(token)
+
+
+        # continue
+
         agent_input = input_loader.get_agent_input_from_token(token)
 
         #print(agent_input.ego_statuses[-1])
@@ -217,20 +299,42 @@ def run_test_evaluation(
         # forward pass
         with torch.no_grad():
             predictions = agent.forward(features)
+
+        trajectory=predictions["trajectory"].cpu().numpy()[0]
+        human_trajectory = scene.get_future_trajectory(8).poses
         
-        poses = predictions["trajectory"].cpu().numpy()[0,:,:2]
+        rel_traj=trajectory-human_trajectory
+
+        theta=human_trajectory[:,2]
+
+        c, s = np.cos(theta), np.sin(theta)
+        mat = np.array([[c, -s],
+                        [s, c]])
+        rel_traj[:,:2]=np.einsum('ti,ijt->tj',rel_traj[:,:2],mat )
+
+        from navsim.visualization.plots import frame_plot_to_gif
+
+        #plot_bev(scene,rel_traj)
+        frame_indices = [idx for idx in range(12)]  # all frames in scene
+        file_name = f"./exp/navsim_test/{token}.gif"
+        scene.rel_pose=rel_traj
+        images = frame_plot_to_gif(file_name, plot_bev, scene, frame_indices)
+
+        continue
+
+        poses = trajectory[:,:2]
+
         proposals = predictions["proposals"].cpu().numpy()[0]
         pdm_score = predictions["pdm_score"].cpu().numpy()[0]
         initial_proposals=predictions["proposal_list"][0].cpu().numpy()[0]
         human_trajectory = scene.get_future_trajectory(8)
 
-        human_poses = human_trajectory.poses[:, :2]
+        human_poses = human_trajectory[:, :2]
 
-        pred_area = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0].reshape(40,3)
+        pred_area = torch.sigmoid(predictions["pred_area_logit"]).cpu().numpy()[0].reshape(-1,40,3)
 
-        MULTIPLE_LANES = pred_area[:,0]
-        NON_DRIVABLE_AREA = pred_area[:,1]
-        ONCOMING_TRAFFIC = pred_area[:,2]
+        on_road=1-pred_area[:,::5,-2]
+        on_route=1-pred_area[:,::5,-1]
 
         pred_agents_states = predictions["pred_agents_states"][0]
 
@@ -241,7 +345,7 @@ def run_test_evaluation(
         frame_idx = scene.scene_metadata.num_history_frames - 1 # current frame
 
         frame_idx = scene.scene_metadata.num_history_frames - 1
-        fig = plt.figure(figsize=(16, 8))
+        fig = plt.figure(figsize=(15, 8))
         gs = GridSpec(2, 3, figure=fig, hspace=0, wspace=0,height_ratios=[0.36,0.64])
 
         # Create axes
@@ -255,11 +359,65 @@ def run_test_evaluation(
         ax02 = fig.add_subplot(gs[0, 2])
         ax12 = fig.add_subplot(gs[1, 2])
 
+        points=proposals[...,:2].reshape(-1,2)
+
+        on_road=on_road.reshape(-1)
+        on_route=on_route.reshape(-1)
+
+        for i in range(len(on_road)):
+
+            color = cm.Reds(on_road[i])  # This returns an RGBA color
+
+            if i ==0:
+                ax10.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2,
+                    label='On-road Prediction'
+                )
+            else:
+                ax10.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2
+                )
+
+            color = cm.Reds(on_route[i])  # This returns an RGBA color
+
+            if i ==0:
+                ax12.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2,
+                    label='On-route Prediction'
+                )
+            else:
+                ax12.scatter(
+                    points[i, 1],
+                    points[i, 0],
+                    color=color,
+                    marker='.',
+                    s=2,
+                    zorder=2
+                )
+
+
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_l0, ax00,pdm_score )
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_f0, ax01,pdm_score )
         plot_front(proposals,initial_proposals,human_poses,poses,cameras.cam_r0, ax02,pdm_score )
 
+        add_configured_bev_on_ax(ax10, scene.map_api, scene.frames[frame_idx])
         add_configured_bev_on_ax(ax11, scene.map_api, scene.frames[frame_idx])
+        add_configured_bev_on_ax(ax12, scene.map_api, scene.frames[frame_idx])
 
         config=TRAJECTORY_CONFIG["human"]
 
@@ -317,7 +475,7 @@ def run_test_evaluation(
             ax11.plot(
                 initial_proposal[:, 1],
                 initial_proposal[:, 0],
-                color='yellow',
+                color='#edc948',
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -391,20 +549,34 @@ def run_test_evaluation(
                                 )
                         ax11.add_patch(p)
 
-        ax11.set_aspect("equal")
+        ax10.set_aspect("equal")
+        ax10.set_xlim(-36, 36)
+        ax10.set_ylim(-8, 64)
+        ax10.invert_xaxis()
+        configure_ax(ax10)
 
-        # NOTE: x forward, y sideways
+        ax11.set_aspect("equal")
         ax11.set_xlim(-36, 36)
         ax11.set_ylim(-8, 64)
-
-        # NOTE: left is y positive, right is y negative
         ax11.invert_xaxis()
         configure_ax(ax11)
 
+        ax12.set_aspect("equal")
+        ax12.set_xlim(-36, 36)
+        ax12.set_ylim(-8, 64)
+        ax12.invert_xaxis()
+        configure_ax(ax12)
+
+        ax01.legend(loc=1)
+        ax10.legend(loc=1)
         ax11.legend(loc=1)
+        ax12.legend(loc=1)
 
         plt.tight_layout()
-        plt.show()
+
+        plt.savefig('exp/navsim_test/'+str(token)+'.png')  # Saves as a PNG file
+        plt.savefig('exp/navsim_test/'+str(token)+'.pdf')  # Saves as a PNG file
+        plt.close()
 
     return output
 

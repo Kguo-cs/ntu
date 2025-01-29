@@ -11,7 +11,7 @@ defaults:
   - default_common
   - default_evaluation
   - default_scoring_parameters
-  - agent: pad_agent
+  - agent: navsim_agent
   - _self_
   - override train_test_split: navtest
 

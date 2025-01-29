@@ -54,10 +54,6 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
         self.bev_pixel_height: int = 256 // 2
         self.bev_pixel_size= 0.25
 
-        # self.data_infos=self.data_infos[i*10000:(i+1)*10000]
-
-        #self.i=i
-
     def get_fut_box(self,gt_agent_feats,gt_agent_boxes,T=6):
         agent_num = gt_agent_feats.shape[0]
 
@@ -107,7 +103,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
         else:
             data= self.prepare_test_data(idx)
 
-        token=str(idx)#+self.i*10000
+        token=str(idx)
 
         fut_boxes=None
 
@@ -187,7 +183,7 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             #features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(local_far_command_xy),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
-            features["camera_feature"] = img[:4].to(torch.float16)
+            features["camera_feature"] = img[:4]
 
             image_shape= np.zeros([1,2])
 
@@ -286,7 +282,7 @@ if not os.path.exists(cache_path):
 else:
     print(f"Directory '{cache_path}' already exists.")
 
-for type in ['train','val']  :#,'train'
+for type in ['val','train']  :
     fut_box = {}
 
     anno_root ="Bench2DriveZoo/data/infos/b2d_"
@@ -299,7 +295,7 @@ for type in ['train','val']  :#,'train'
 
     nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality)
 
-    data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=12,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
+    data_loader=DataLoader(nuscenes_data,batch_size=1, pin_memory=False,collate_fn=my_collate)#num_workers=12,prefetch_factor=32,
 
     for  data in tqdm(data_loader):
         for key,value in data[0].items():

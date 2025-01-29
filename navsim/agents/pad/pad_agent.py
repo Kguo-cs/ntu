@@ -123,7 +123,7 @@ class PadAgent(AbstractAgent):
             for token, town_name, lidar2world, poses, target_poses in zip(targets["token"], targets["town_name"],
                                                                  targets["lidar2world"].cpu().numpy(), trajectory,
                                                                  target_traj):
-                all_lane_points = self.map_infos[town_name[:6]]
+                all_lane_points = self.map_infos[town_name[:6]][::4]
 
                 xy=lidar2world[0:2, 3]
 

@@ -22,7 +22,7 @@ class PadConfig:
     proposal_num: int = 64
     point_cloud_range= [-32, -32, 0.0, 32, 32,4.0]
 
-    half_length = 2.042+0.15
+    half_length = 2.042+0.25
     half_width= 0.925+0.1
     rear_axle_to_center =0.39
     lidar_height=2.05

@@ -3,6 +3,7 @@ import torch.nn as nn
 from ..bevformer.bev_refiner import Bev_refiner
 from ..bevformer.transformer_decoder import MyTransformeDecoder
 from .map_head import MapHead
+import numpy as np
 
 class Scorer(nn.Module):
     def __init__(self, config):
@@ -71,6 +72,9 @@ class Scorer(nn.Module):
         batch_size=len(proposals)
         p_size=proposals.shape[1]
         t_size=proposals.shape[2]
+
+        proposals=torch.zeros_like(proposals)
+        proposals[...,-1]+=np.pi/2
 
         if self.score_bev:
             keyval = self.Bev_refiner(proposals, keyval, image_feature)

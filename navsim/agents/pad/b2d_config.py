@@ -20,11 +20,12 @@ class PadConfig:
     area_pred: bool=True
 
     proposal_num: int = 64
-    point_cloud_range= [-32, -32, -2.0, 32, 32,2.0]
+    point_cloud_range= [-32, -32, 0.0, 32, 32,4.0]
 
     half_length = 2.042+0.15
     half_width= 0.925+0.1
     rear_axle_to_center =0.39
+    lidar_height=2.05
 
     num_poses=6
     num_agent_pose=6

@@ -37,7 +37,7 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=False
+            self.ray=True
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
@@ -123,7 +123,7 @@ class PadAgent(AbstractAgent):
             for token, town_name, lidar2world, poses, target_poses in zip(targets["token"], targets["town_name"],
                                                                  targets["lidar2world"].cpu().numpy(), trajectory,
                                                                  target_traj):
-                all_lane_points = self.map_infos[town_name]
+                all_lane_points = self.map_infos[town_name[:6]]
 
                 xy=lidar2world[0:2, 3]
 

@@ -41,6 +41,7 @@ class Bev_refiner(nn.Module):
         half_length = config.half_length
         half_width = config.half_width
         rear_axle_to_center = config.rear_axle_to_center
+        lidar_height=config.lidar_height
 
         self.bev_decoder = BEVFormerEncoder(
             bev_w=self.bev_w,
@@ -51,6 +52,7 @@ class Bev_refiner(nn.Module):
             half_length=half_length,
             half_width=half_width,
             rear_axle_to_center=rear_axle_to_center,
+            lidar_height=lidar_height,
             return_intermediate=False,
             transformerlayers=dict(
                 type='BEVFormerLayer',

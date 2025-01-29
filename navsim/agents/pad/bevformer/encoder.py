@@ -26,7 +26,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
             `LN`.
     """
 
-    def __init__(self, *args,bev_h,bev_w, pc_range=None, num_points_in_pillar=4,half_width=0,half_length=0,rear_axle_to_center=0, return_intermediate=False, dataset_type='nuscenes',
+    def __init__(self, *args,bev_h,bev_w, pc_range=None, num_points_in_pillar=4,lidar_height=0,half_width=0,half_length=0,rear_axle_to_center=0, return_intermediate=False, dataset_type='nuscenes',
                  **kwargs):
         super(BEVFormerEncoder, self).__init__(*args, **kwargs)
         self.return_intermediate = return_intermediate
@@ -67,6 +67,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
         self.half_length = half_length
         self.half_width = half_width
         self.rear_axle_to_center = rear_axle_to_center
+        self.lidar_height=lidar_height
 
     @staticmethod
     def get_reference_points(H, W, Z=8, num_points_in_pillar=4, dim='3d', bs=1, device='cpu', dtype=torch.float):
@@ -235,7 +236,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
 
                 hybird_ref_2d = torch.cat([ref_pos, ref_pos])
 
-                zs = torch.linspace(self.pc_range[2]+0.5, self.pc_range[5] - 0.5, self.num_points_in_pillar, dtype=torch.float32,
+                zs = torch.linspace(self.pc_range[2]-self.lidar_height, self.pc_range[5]-self.lidar_height, self.num_points_in_pillar, dtype=torch.float32,
                                     device=ref_2d.device)
 
                 zs = zs[None, None, :, None].repeat(bs, len_bev, 1, 1)

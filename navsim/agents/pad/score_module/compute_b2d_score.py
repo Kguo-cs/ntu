@@ -118,7 +118,7 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
 
     fut_mask=fut_box_corners.all(-1).all(-1)
 
-    all_proposals=np.concatenate([target_trajectory[None],proposals],axis=0)
+    all_proposals=np.concatenate([proposals,target_trajectory[None]],axis=0)
 
     collsions,ttc_collision,key_agent_corners,key_agent_labels,ego_corners=evaluate_coll(all_proposals,fut_box_corners,fut_mask)
 
@@ -135,13 +135,13 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
     global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
 
     center_xy=nearby_point[:,:2]
-    center_width=nearby_point[:,2]+0.1
+    center_width=nearby_point[:,2]+0.2
     #center_heading=nearby_point[:,3]
     center_laneid=nearby_point[:,4]
 
     dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
 
-    on_road=dist_to_center[:,1:]<center_width[:,None,None,None]
+    on_road=dist_to_center[:,:-1]<center_width[:,None,None,None]
 
     on_road_all=on_road.any(0).all(-1)
 
@@ -151,9 +151,9 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
 
     nearest_road_id=nearest_lane_id.astype(int)
 
-    target_road_id=np.unique(nearest_road_id[0]) 
+    target_road_id=np.unique(nearest_road_id[-1]) 
 
-    proposal_center_road_id=nearest_road_id[1:,:,-1]
+    proposal_center_road_id=nearest_road_id[:-1,:,-1]
 
     on_route_all=np.isin(proposal_center_road_id, target_road_id) 
 

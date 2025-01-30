@@ -6,10 +6,10 @@ qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 conda activate pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_1.log 2>&1 & tail -f B2d32_acc0_1.log
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acclocal0_2.log 2>&1 & tail -f B2d32_acclocal0_2.log
 
 qstat -ans
-export PBS_JOBID=24447.pbs111
+export PBS_JOBID=24462.pbs111
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 # Install

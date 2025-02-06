@@ -6,7 +6,7 @@ qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 conda activate pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acclocal0_2.log 2>&1 & tail -f B2d32_acclocal0_2.log
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_speed1acc0_1.log 2>&1 & tail -f B2d32_speed1acc0_1.log
 
 qstat -ans
 export PBS_JOBID=24462.pbs111

@@ -45,7 +45,7 @@ os.environ["SCENARIO_RUNNER_ROOT"] = "scenario_runner"
 os.environ["LEADERBOARD_ROOT"] = "leaderboard"
 
 TEAM_AGENT=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_b2d_agent_visualize.py"
-TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/B2d_onlyP_map88_learnpos_scorekeyval2_closemul_epoch=13-step=10752.ckpt"
+TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/B2d32_speed1acclocal0_3_epoch=8-step=6912.ckpt"
 
 if not os.path.exists("./eval_vis/"):
     os.mkdir("./eval_vis/")

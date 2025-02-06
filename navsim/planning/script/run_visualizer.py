@@ -139,7 +139,7 @@ def plot_front(proposals,initial_proposals,human_poses,poses,camera, ax,pdm_scor
                 points[:, 0],
                 points[:, 1],
                 color=color,
-                alpha=pdm_score[i],
+                alpha=1,
                 linewidth=1,
                 linestyle=config["line_style"],
                 marker='.',
@@ -507,7 +507,7 @@ def run_test_evaluation(
                                 )
                         else:
                             p = Polygon(col_corner_t,
-                                        alpha=pdm_score[i],
+                                        alpha=1,
                                         edgecolor=color,
                                         facecolor = "None",
                                         zorder=2
@@ -542,7 +542,7 @@ def run_test_evaluation(
 
                         else:
                             p = Polygon(ttc_corner_t,
-                                alpha=pdm_score[i],
+                                alpha=1,
                                 edgecolor=color,
                                 facecolor = "None",
                                 zorder=2

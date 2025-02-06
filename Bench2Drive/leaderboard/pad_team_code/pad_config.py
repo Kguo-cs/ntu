@@ -2,7 +2,7 @@ point_cloud_range = [-64.0, -64.0, -2.0, 64.0, 64.0, 2.0]
 class_names = [
 'car','van','truck','bicycle','traffic_sign','traffic_cone','traffic_light','pedestrian','others'
 ]
-scale=0.4 
+scale= 1 #0.4 
 
 
 eval_cfg = {

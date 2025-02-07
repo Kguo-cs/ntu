@@ -8,7 +8,7 @@ TEAM_AGENT=team_code/vad_b2d_agent.py
 TEAM_CONFIG=Bench2DriveZoo/adzoo/vad/configs/VAD/VAD_base_e2e_b2d.py+YOUR_CKPT_PATH/vad_b2d_base.pth
 BASE_CHECKPOINT_ENDPOINT=eval_bench2drive220
 PLANNER_TYPE=traj
-ALGO=pad
+ALGO=vad
 SAVE_PATH=./eval_bench2drive220_${ALGO}_${PLANNER_TYPE}
 
 if [ ! -d "${ALGO}_b2d_${PLANNER_TYPE}" ]; then

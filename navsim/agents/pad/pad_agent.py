@@ -37,7 +37,7 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=True
+            self.ray=False
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
@@ -53,7 +53,7 @@ class PadAgent(AbstractAgent):
                 from .score_module.compute_b2d_score import get_scores
                 self.get_scores = get_scores
 
-                map_file ="Bench2DriveZoo/data/infos/map.pkl"
+                map_file =os.getenv("NAVSIM_EXP_ROOT") +"/../Bench2DriveZoo/data/infos/map.pkl"
 
                 with open(map_file, 'rb') as f:
                     self.map_infos = pickle.load(f)

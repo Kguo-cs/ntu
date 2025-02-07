@@ -97,9 +97,9 @@ class Scorer(nn.Module):
             if self.area_pred:
                 pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
 
-        if self.agent_pred:
-            col_agents_state = self.pred_col_agent(trajectory, keyval)
-            ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
-            pred_agents_states = torch.stack([ttc_agents_state, col_agents_state], dim=2)
+            if self.agent_pred:
+                col_agents_state = self.pred_col_agent(trajectory, keyval)
+                ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
+                pred_agents_states = torch.stack([ttc_agents_state, col_agents_state], dim=2)
 
         return pred_logit,pred_logit2, pred_agents_states, pred_area_logit,bev_semantic_map,agent_states,agent_labels

@@ -1,13 +1,15 @@
 import numpy as np
 import pytorch_lightning as pl
 import torch
-
 from torch import Tensor
 from typing import Dict, Tuple, Any
 
 from navsim.agents.abstract_agent import AbstractAgent
-import pickle
-import torch.distributed as dist
+import glob
+import os
+import subprocess
+import shutil
+import json
 
 class AgentLightningModule(pl.LightningModule):
     """Pytorch lightning wrapper for learnable agent."""
@@ -48,7 +50,6 @@ class AgentLightningModule(pl.LightningModule):
         """
         return self._step(batch, "train")
 
-
     def validation_step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], batch_idx: int):
         """
         Step called on validation samples
@@ -87,7 +88,62 @@ class AgentLightningModule(pl.LightningModule):
         else:
             return self._step(batch, "val")
 
+    def on_validation_epoch_end(self) -> None:
+        if self.agent.b2d:
+            folder_path=os.getenv('Bench2Drive_ROOT')+'/eval_bench2drive220_pad_traj'
 
+            file_paths = glob.glob(f'{folder_path}/*.json')
+            merged_records = []
+            driving_score = []
+            success_num = 0
+            for file_path in file_paths:
+                if 'merged.json' in file_path: continue
+                with open(file_path) as file:
+                    data = json.load(file)
+                    records = data['_checkpoint']['records']
+                    for rd in records:
+                        rd.pop('index')
+                        merged_records.append(rd)
+                        driving_score.append(rd['scores']['score_composed'])
+                        if rd['status'] == 'Completed' or rd['status'] == 'Perfect':
+                            success_flag = True
+                            for k, v in rd['infractions'].items():
+                                if len(v) > 0 and k != 'min_speed_infractions':
+                                    success_flag = False
+                                    break
+                            if success_flag:
+                                success_num += 1
+                                print(rd['route_id'])
+
+            if len(merged_records):
+                driving_score=sum(driving_score) / len(merged_records)
+                success_rate= success_num / len(merged_records)
+                eval_num=len(merged_records)
+
+                logging_prefix = "val"
+
+                self.log(f"{logging_prefix}/driving_score", driving_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+                self.log(f"{logging_prefix}/success_rate", success_rate, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+                self.log(f"{logging_prefix}/eval_num", eval_num, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+
+    def on_train_epoch_start(self):
+        if self.global_step>0 and self.agent.b2d:
+            checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
+            checkpoint_path=checkpoint_path+'/'+os.listdir(checkpoint_path)[-1]
+
+            dir_to_remove=os.getenv('Bench2Drive_ROOT')+'/eval_bench2drive220_pad_traj'
+
+            if os.path.exists(dir_to_remove):
+                shutil.rmtree(dir_to_remove)
+
+            closeloop_eval_script='leaderboard/scripts/run_evaluation_pad.sh'
+
+            global_rank =self.global_rank  # Replace with your actual global_rank, or use self.global_rank if inside a class
+
+            # Construct the command arguments
+            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),str(self.global_step)]
+
+            subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
 
     def configure_optimizers(self):
         """Inherited, see superclass."""

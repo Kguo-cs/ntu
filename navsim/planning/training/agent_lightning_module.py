@@ -21,6 +21,7 @@ class AgentLightningModule(pl.LightningModule):
         """
         super().__init__()
         self.agent = agent
+        self.checkpoint_file=None
 
     def _step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], logging_prefix: str) -> Tensor:
         """
@@ -89,8 +90,8 @@ class AgentLightningModule(pl.LightningModule):
             return self._step(batch, "val")
 
     def on_validation_epoch_end(self) -> None:
-        if self.agent.b2d:
-            folder_path=os.getenv('Bench2Drive_ROOT')+'/eval_bench2drive220_pad_traj'
+        if self.agent.b2d and self.checkpoint_file is not None:
+            folder_path=self.trainer.default_root_dir+'/'+self.checkpoint_file[:-5]
 
             file_paths = glob.glob(f'{folder_path}/*.json')
             merged_records = []
@@ -118,31 +119,36 @@ class AgentLightningModule(pl.LightningModule):
             if len(merged_records):
                 driving_score=sum(driving_score) / len(merged_records)
                 success_rate= success_num / len(merged_records)
-                eval_num=len(merged_records)
+            else:
+                driving_score=0
+                success_rate=0
 
-                logging_prefix = "val"
+            eval_num=len(merged_records)
 
-                self.log(f"{logging_prefix}/driving_score", driving_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-                self.log(f"{logging_prefix}/success_rate", success_rate, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-                self.log(f"{logging_prefix}/eval_num", eval_num, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            logging_prefix = "val"
+
+            self.log(f"{logging_prefix}/driving_score", driving_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/success_rate", success_rate, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log(f"{logging_prefix}/eval_num", eval_num, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def on_train_epoch_start(self):
         if self.global_step>0 and self.agent.b2d:
             checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
-            checkpoint_file=os.listdir(checkpoint_path)[-1]
-            checkpoint_path=checkpoint_path+'/'+checkpoint_file
+            for checkpoint_file in os.listdir(checkpoint_path):
+                if str(self.global_step) in checkpoint_file:
+                    self.checkpoint_file=checkpoint_file
+            checkpoint_path=checkpoint_path+'/'+self.checkpoint_file
 
-            dir_to_remove=os.getenv('Bench2Drive_ROOT')+'/eval_bench2drive220_pad_traj'
+            result_dir=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 
-            if os.path.exists(dir_to_remove):
-                shutil.rmtree(dir_to_remove)
+            os.makedirs(result_dir)
 
             closeloop_eval_script='leaderboard/scripts/run_evaluation_pad.sh'
 
             global_rank =self.global_rank  # Replace with your actual global_rank, or use self.global_rank if inside a class
 
             # Construct the command arguments
-            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),checkpoint_file]
+            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),result_dir]
 
             subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
 

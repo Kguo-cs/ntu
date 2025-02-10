@@ -129,7 +129,8 @@ class AgentLightningModule(pl.LightningModule):
     def on_train_epoch_start(self):
         if self.global_step>0 and self.agent.b2d:
             checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
-            checkpoint_path=checkpoint_path+'/'+os.listdir(checkpoint_path)[-1]
+            checkpoint_file=os.listdir(checkpoint_path)[-1]
+            checkpoint_path=checkpoint_path+'/'+checkpoint_file
 
             dir_to_remove=os.getenv('Bench2Drive_ROOT')+'/eval_bench2drive220_pad_traj'
 
@@ -141,7 +142,7 @@ class AgentLightningModule(pl.LightningModule):
             global_rank =self.global_rank  # Replace with your actual global_rank, or use self.global_rank if inside a class
 
             # Construct the command arguments
-            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),str(self.global_step)]
+            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),checkpoint_file]
 
             subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
 

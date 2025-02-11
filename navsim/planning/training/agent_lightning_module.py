@@ -141,7 +141,8 @@ class AgentLightningModule(pl.LightningModule):
 
             result_dir=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 
-            os.makedirs(result_dir)
+            if self.global_rank==0:
+                os.makedirs(result_dir)
 
             closeloop_eval_script='leaderboard/scripts/run_evaluation_pad.sh'
 

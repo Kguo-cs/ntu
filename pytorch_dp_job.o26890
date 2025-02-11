@@ -1,0 +1,29 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2025-02-10 22:18:40.289193:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 26890.pbs111
+	Project: 12002486
+	Exit Status: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(112), Used(112)
+	CPU Time Used: 25:07:15
+	Memory: Requested(1880gb), Used(784406768kb)
+	Vmem Used: 87681718720kb
+	Walltime: Requested(48:00:00), Used(00:58:59)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (a2ap-dgx026:ncpus=112:ngpus=8:mem=1971322880kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	GPU Duration: 59.32mins
+	GPU Power Consumed: 143.05W
+	GPU Max GPU Memory Used: 177.28GB
+	Memory Throughput Rate (Average): a2ap-dgx026:(gpu1:4%+gpu0:4%+gpu2:5%+gpu3:4%+gpu5:4%+gpu4:5%+gpu6:4%+gpu7:4%)
+	Memory Throughput Rate (Max): a2ap-dgx026:(gpu1:67%+gpu0:69%+gpu2:68%+gpu3:66%+gpu5:69%+gpu4:71%+gpu6:70%+gpu7:71%)
+	Memory Throughput Rate (Min): a2ap-dgx026:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%+gpu5:0%+gpu4:0%+gpu6:0%+gpu7:0%)
+	GPU SM Utilization (Average): a2ap-dgx026:(gpu1:19%+gpu0:21%+gpu2:14%+gpu3:19%+gpu5:18%+gpu4:22%+gpu6:22%+gpu7:21%)
+	GPU SM Utilization (Max): a2ap-dgx026:(gpu1:100%+gpu0:100%+gpu2:100%+gpu3:100%+gpu5:100%+gpu4:100%+gpu6:100%+gpu7:100%)
+	GPU SM Utilization (Min): a2ap-dgx026:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%+gpu5:0%+gpu4:0%+gpu6:0%+gpu7:0%)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Warning: None
+GPU application profile: Low
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+

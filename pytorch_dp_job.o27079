@@ -1,0 +1,30 @@
+/var/spool/pbs/mom_priv/jobs/27079.pbs111.SC: line 29: 4144650 Killed                  python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acclocal0.log 2>&1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2025-02-11 13:12:41.935504:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 27079.pbs111
+	Project: 12002486
+	Exit Status: 137
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(112), Used(112)
+	CPU Time Used: 05:16:28
+	Memory: Requested(1880gb), Used(642859808kb)
+	Vmem Used: 46117340244kb
+	Walltime: Requested(48:00:00), Used(00:10:39)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (a2ap-dgx036:ncpus=112:ngpus=8:mem=1971322880kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	GPU Duration: 11.3mins
+	GPU Power Consumed: 136.23W
+	GPU Max GPU Memory Used: 171.28GB
+	Memory Throughput Rate (Average): a2ap-dgx036:(gpu1:5%+gpu0:5%+gpu2:5%+gpu3:5%+gpu5:3%+gpu4:4%+gpu6:5%+gpu7:2%)
+	Memory Throughput Rate (Max): a2ap-dgx036:(gpu1:65%+gpu0:65%+gpu2:72%+gpu3:63%+gpu5:49%+gpu4:55%+gpu6:71%+gpu7:46%)
+	Memory Throughput Rate (Min): a2ap-dgx036:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%+gpu5:0%+gpu4:0%+gpu6:0%+gpu7:0%)
+	GPU SM Utilization (Average): a2ap-dgx036:(gpu1:15%+gpu0:19%+gpu2:13%+gpu3:17%+gpu5:12%+gpu4:14%+gpu6:19%+gpu7:15%)
+	GPU SM Utilization (Max): a2ap-dgx036:(gpu1:100%+gpu0:100%+gpu2:100%+gpu3:100%+gpu5:100%+gpu4:100%+gpu6:100%+gpu7:100%)
+	GPU SM Utilization (Min): a2ap-dgx036:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%+gpu5:0%+gpu4:0%+gpu6:0%+gpu7:0%)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Warning: None
+GPU application profile: Low
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+

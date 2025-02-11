@@ -53,7 +53,7 @@ class PadAgent(AbstractAgent):
                 from .score_module.compute_b2d_score import get_scores
                 self.get_scores = get_scores
 
-                map_file =os.getenv("NAVSIM_EXP_ROOT") +"/../Bench2DriveZoo/data/infos/map.pkl"
+                map_file =os.getenv("NAVSIM_EXP_ROOT") +"/map.pkl"
 
                 with open(map_file, 'rb') as f:
                     self.map_infos = pickle.load(f)
@@ -123,7 +123,7 @@ class PadAgent(AbstractAgent):
             for token, town_name, lidar2world, poses, target_poses in zip(targets["token"], targets["town_name"],
                                                                  targets["lidar2world"].cpu().numpy(), trajectory,
                                                                  target_traj):
-                all_lane_points = self.map_infos[town_name[:6]][::10]
+                all_lane_points = self.map_infos[town_name[:6]]
 
                 xy=lidar2world[0:2, 3]
 

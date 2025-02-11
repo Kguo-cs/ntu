@@ -1,19 +1,18 @@
 
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
-qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
+qsub -I -l select=1:ngpus=1 -l walltime=120:00:00 -P 12002486
 
 sudo apt install gcc g++ -y
-
-enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla.sqsh
-enroot start  --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scratch  --mount /home/users/ntu/lyuchen/miniconda3:/home/users/ntu/lyuchen/miniconda3 -w carla bash
-
 export no_proxy=localhost,127.0.0.1,10.104.0.0/21
 export https_proxy=http://10.104.4.124:10104
 export http_proxy=http://10.104.4.124:10104
-
 pip install -U openmim
 mim install mmcv-full==1.7.2
+
+enroot create --name carla2 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
+enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scratch  --mount /home/users/ntu/lyuchen/miniconda3:/home/users/ntu/lyuchen/miniconda3 -w carla2 bash
+
 
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
@@ -23,7 +22,7 @@ python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2
 
 
 qstat -ans
-export PBS_JOBID=24447.pbs111
+export PBS_JOBID=27079.pbs111
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 sh cuda_12.1.1_530.30.02_linux.run  --toolkitpath=/home/users/ntu/lyuchen/scratch/keguo_projects/cuda --toolkit --silent

@@ -250,7 +250,7 @@ class LankMarkingGettor(object):
                             lane_marking_dict[waypoint.road_id][center_previous_lane_id].append(candidate_dict)
                         right_lane_marking_list = []
                         
-            center_lane_list.append((*LankMarkingGettor.get_lateral_shifted_transform(waypoint.transform, 0), waypoint.is_junction))
+            center_lane_list.append((*LankMarkingGettor.get_lateral_shifted_transform(waypoint.transform, 0),waypoint.is_junction))
             center_lane_wps.append(waypoint)
             
             left_lane_marking_list.append(LankMarkingGettor.get_lateral_shifted_transform(waypoint.transform, -0.5*waypoint.lane_width))

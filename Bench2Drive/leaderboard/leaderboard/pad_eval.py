@@ -35,7 +35,7 @@ sys.path.append(Bench2Drive_ROOT + 'leaderboard/pad_team_code')
 sys.path.append(Bench2Drive_ROOT + 'scenario_runner')
 
 
-ROUTES="leaderboard/data/bench2drive220.xml"
+ROUTES="/home/ke/PAD/Bench2Drive/leaderboard/data/bench2drive220.xml"
 os.environ["SAVE_PATH"] = "./eval_pad/"
 os.environ["IS_BENCH2DRIVE"] = "True"
 os.environ["ROUTES"] = ROUTES
@@ -45,7 +45,7 @@ os.environ["SCENARIO_RUNNER_ROOT"] = "scenario_runner"
 os.environ["LEADERBOARD_ROOT"] = "leaderboard"
 #95 3800
 TEAM_AGENT=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_b2d_agent.py"
-TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp//home/ke/PAD/exp/B2d32_speed1acclocal0_3_epoch=8-step=6912.ckpt"
+TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/epoch=6-step=5376.ckpt"
 
 if not os.path.exists("./eval_pad/"):
     os.mkdir("./eval_pad/")

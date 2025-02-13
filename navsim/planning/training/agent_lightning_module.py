@@ -116,6 +116,9 @@ class AgentLightningModule(pl.LightningModule):
                                 success_num += 1
                                 print(rd['route_id'])
 
+            subprocess.run(['bash', 'Bench2Drive/leaderboard/scripts/clean_carla.sh', self.global_rank])
+            subprocess.run(["pkill", "-9", "-f", "run_evaluation.sh"])
+
             if len(merged_records):
                 driving_score=sum(driving_score) / len(merged_records)
                 success_rate= success_num / len(merged_records)

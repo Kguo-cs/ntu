@@ -17,7 +17,7 @@ split: trainval
 cache_path: ${oc.env:NAVSIM_EXP_ROOT}/B2d_cache
 use_cache_without_dataset: true # load the training samples from the cache. scene-filter will be ignored
 force_cache_computation: false
-experiment_name: B2d32_acclocal0_2000 #h24  #1clip_speed1localacc0
+experiment_name: B2d32_acclocal0_2000_d0 #h24  #1clip_speed1localacc0
 seed: 0
 
 dataloader:

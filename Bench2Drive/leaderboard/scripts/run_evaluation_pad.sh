@@ -11,8 +11,7 @@ PLANNER_TYPE=traj
 ALGO=pad
 SAVE_PATH=$3
 
-bash leaderboard/scripts/clean_carla.sh $2
-pkill -9 -f run_evaluation.sh
+i=$2
 
 PORT=$((BASE_PORT + i * 150))
 TM_PORT=$((BASE_TM_PORT + i * 150))
@@ -28,5 +27,5 @@ echo -e "\033[32m CHECKPOINT_ENDPOINT: $CHECKPOINT_ENDPOINT \033[0m"
 echo -e "\033[32m GPU_RANK: $GPU_RANK \033[0m"
 echo -e "\033[32m bash leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK \033[0m"
 echo -e "***********************************************************************************"
-bash -e leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK  2>&1 > $3/$2.log &
+bash -e leaderboard/scripts/run_evaluation.sh $PORT $TM_PORT $IS_BENCH2DRIVE $ROUTES $TEAM_AGENT $TEAM_CONFIG $CHECKPOINT_ENDPOINT $SAVE_PATH $PLANNER_TYPE $GPU_RANK  > $3/$2.log  2>&1 &
 sleep 5

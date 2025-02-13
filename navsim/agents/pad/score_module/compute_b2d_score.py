@@ -135,8 +135,8 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
     global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
 
     center_xy=nearby_point[:,:2]
-    center_width=nearby_point[:,2]+0.1
-    center_laneid=nearby_point[:,3]
+    center_width=nearby_point[:,2]
+    center_laneid=nearby_point[:,-1]
 
     dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
 

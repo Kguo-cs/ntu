@@ -1,7 +1,7 @@
 
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
-qsub -I -l select=1:ngpus=1 -l walltime=120:00:00 -P 12002486
+qsub -I -l select=1:ngpus=2 -l walltime=120:00:00 -P 12002486
 
 sudo apt install gcc g++ -y
 export no_proxy=localhost,127.0.0.1,10.104.0.0/21
@@ -19,10 +19,11 @@ cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 conda activate pad
 python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_0.log 2>&1 & tail -f B2d32_acc0_1.log
 
+bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000/02.12_18.46/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 1 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000/02.12_18.46/res_epoch=0-step=768/
 
 
 qstat -ans
-export PBS_JOBID=27079.pbs111
+export PBS_JOBID=27317.pbs111
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 sh cuda_12.1.1_530.30.02_linux.run  --toolkitpath=/home/users/ntu/lyuchen/scratch/keguo_projects/cuda --toolkit --silent
@@ -97,6 +98,7 @@ huggingface-cli download --repo-type dataset --resume-download rethinklab/Bench2
 4. cache training data and metric
 ```bash
 python Bench2Drive/leaderboard/pad_team_code/b2d_datacache.py
+python Bench2Drive/leaderboard/pad_team_code/gen_mapinfo.py
 ```
 
 5. train Bench2drive model

@@ -1,7 +1,7 @@
 
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
-qsub -I -l select=1:ngpus=2 -l walltime=120:00:00 -P 12002486
+qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
 
 sudo apt install gcc g++ -y
 export no_proxy=localhost,127.0.0.1,10.104.0.0/21
@@ -17,9 +17,9 @@ enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scr
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
 conda activate pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_0.log 2>&1 & tail -f B2d32_acc0_1.log
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_0.log 2>&1 & tail -f B2d32_acc0_0.log
 
-bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000/02.12_18.46/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 1 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000/02.12_18.46/res_epoch=0-step=768/
+bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 1 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/res_epoch=0-step=768
 
 
 qstat -ans

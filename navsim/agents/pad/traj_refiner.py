@@ -1,6 +1,7 @@
 import torch.nn as nn
 from .bevformer.bev_refiner import Bev_refiner
 from .bevformer.transformer_decoder import MyTransformeDecoder
+import numpy as np
 
 class Traj_refiner(nn.Module):
     def __init__(self,config,init_p=False):
@@ -36,8 +37,8 @@ class Traj_refiner(nn.Module):
 
         proposals=self.traj_decoder(trajectory,keyval).reshape(keyval.shape[0],-1,self.poses_num,self.state_size)
 
-        # if self.b2d:
-        #     proposals[...,2]+=np.pi/2
+        if self.b2d:
+            proposals[...,2]+=np.pi/2
 
         proposal_list.append(proposals)
 

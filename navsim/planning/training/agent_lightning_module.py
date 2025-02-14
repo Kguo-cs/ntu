@@ -94,7 +94,7 @@ class AgentLightningModule(pl.LightningModule):
             subprocess.run(['bash', os.getenv('Bench2Drive_ROOT')+'/leaderboard/scripts/clean_carla.sh', str(self.global_rank)])
             subprocess.run(["pkill", "-9", "-f", "run_evaluation.sh"])
 
-            folder_path=self.trainer.default_root_dir+'/'+self.checkpoint_file[:-5]
+            folder_path=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 
             file_paths = glob.glob(f'{folder_path}/*.json')
             merged_records = []
@@ -136,16 +136,13 @@ class AgentLightningModule(pl.LightningModule):
 
     def on_train_epoch_start(self):
         if self.global_step>0 and self.agent.b2d:
-
-            checkpoint_dir=self.trainer.default_root_dir
-
-            checkpoint_path=checkpoint_dir+"/lightning_logs/version_0/checkpoints"
+            checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
             for checkpoint_file in os.listdir(checkpoint_path):
                 if str(self.global_step) in checkpoint_file:
                     self.checkpoint_file=checkpoint_file
             checkpoint_path=checkpoint_path+'/'+self.checkpoint_file
 
-            result_dir=checkpoint_dir+'/res_'+self.checkpoint_file[:-5]
+            result_dir=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 
             if self.global_rank==0:
                 os.makedirs(result_dir)

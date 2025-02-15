@@ -10,14 +10,15 @@ export http_proxy=http://10.104.4.124:10104
 pip install -U openmim
 mim install mmcv-full==1.7.2
 
-enroot create --name carla2 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
-enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scratch  --mount /home/users/ntu/lyuchen/miniconda3:/home/users/ntu/lyuchen/miniconda3 -w carla2 bash
+enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
+enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scratch  --mount /home/users/ntu/lyuchen/miniconda3:/home/users/ntu/lyuchen/miniconda3 -w carla bash
 
 
+enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
-conda activate pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_0.log 2>&1 & tail -f B2d32_acc0_0.log
+conda activate Pad
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_1.log 2>&1 & tail -f B2d32_acc0_1.log
 
 bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 1 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/res_epoch=0-step=768
 

@@ -12,7 +12,7 @@ import os
 import subprocess
 import shutil
 import json
-from Bench2Drive.leaderboard.leaderboard import pad_evaluator,start_carla
+from Bench2Drive.leaderboard.leaderboard import start_carla
 import threading
 import sys
 import io
@@ -32,12 +32,6 @@ class AgentLightningModule(pl.LightningModule):
         super().__init__()
         self.agent = agent
         self.checkpoint_file=None
-
-        if self.agent.b2d:
-
-            start_carla.run(self.global_rank)
-
-
 
     def _step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], logging_prefix: str) -> Tensor:
         """
@@ -150,26 +144,29 @@ class AgentLightningModule(pl.LightningModule):
             self.log(f"{logging_prefix}/eval_num", eval_num, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def on_train_epoch_start(self):
-        if self.global_step>0 and self.agent.b2d:
-            checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
-            for checkpoint_file in os.listdir(checkpoint_path):
-                if str(self.global_step) in checkpoint_file:
-                    self.checkpoint_file=checkpoint_file
-            checkpoint_path=checkpoint_path+'/'+self.checkpoint_file
+        if  self.agent.b2d:
+            if self.global_step==0:
+                start_carla.run(self.global_rank)
+            else:
+                checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
+                for checkpoint_file in os.listdir(checkpoint_path):
+                    if str(self.global_step) in checkpoint_file:
+                        self.checkpoint_file=checkpoint_file
+                checkpoint_path=checkpoint_path+'/'+self.checkpoint_file
 
-            result_dir=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
+                result_dir=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 
-            if self.global_rank==0:
-                os.makedirs(result_dir)
+                if self.global_rank==0:
+                    os.makedirs(result_dir)
 
-            closeloop_eval_script='leaderboard/scripts/run_evaluation_pad.sh'
+                closeloop_eval_script='leaderboard/scripts/run_evaluation_pad.sh'
 
-            global_rank =self.global_rank  # Replace with your actual global_rank, or use self.global_rank if inside a class
+                global_rank =self.global_rank  # Replace with your actual global_rank, or use self.global_rank if inside a class
 
-            # Construct the command arguments
-            command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),result_dir]
+                # Construct the command arguments
+                command = ['bash', closeloop_eval_script, checkpoint_path, str(global_rank),result_dir]
 
-            subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
+                subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
 
     def configure_optimizers(self):
         """Inherited, see superclass."""

@@ -23,18 +23,20 @@ import sys
 import carla
 import signal
 
-CARLA_ROOT=os.environ.get("CARLA_ROOT")
-Bench2Drive_ROOT=os.environ.get("Bench2Drive_ROOT")
+CARLA_ROOT = os.environ.get("CARLA_ROOT")
+Bench2Drive_ROOT = os.environ.get("Bench2Drive_ROOT")
 
 sys.path.append(CARLA_ROOT + "/PythonAPI")
 sys.path.append(CARLA_ROOT + "/PythonAPI/carla")
 sys.path.append(CARLA_ROOT + "/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg")
 
-
 sys.path.append(Bench2Drive_ROOT + '/leaderboard')
 sys.path.append(Bench2Drive_ROOT + '/leaderboard/pad_team_code')
 sys.path.append(Bench2Drive_ROOT + '/scenario_runner')
 
+os.environ["IS_BENCH2DRIVE"] = "True"
+os.environ["SCENARIO_RUNNER_ROOT"] = "scenario_runner"
+os.environ["LEADERBOARD_ROOT"] = "leaderboard"
 
 from srunner.scenariomanager.carla_data_provider import *
 from srunner.scenariomanager.timer import GameTime
@@ -53,16 +55,17 @@ import random
 from datetime import datetime
 
 sensors_to_icons = {
-    'sensor.camera.rgb':        'carla_camera',
-    'sensor.lidar.ray_cast':    'carla_lidar',
-    'sensor.other.radar':       'carla_radar',
-    'sensor.other.gnss':        'carla_gnss',
-    'sensor.other.imu':         'carla_imu',
-    'sensor.opendrive_map':     'carla_opendrive_map',
-    'sensor.speedometer':       'carla_speedometer'
+    'sensor.camera.rgb': 'carla_camera',
+    'sensor.lidar.ray_cast': 'carla_lidar',
+    'sensor.other.radar': 'carla_radar',
+    'sensor.other.gnss': 'carla_gnss',
+    'sensor.other.imu': 'carla_imu',
+    'sensor.opendrive_map': 'carla_opendrive_map',
+    'sensor.speedometer': 'carla_speedometer'
 }
 
 import socket
+
 
 def find_free_port(starting_port):
     port = starting_port
@@ -74,21 +77,25 @@ def find_free_port(starting_port):
         except OSError:
             port += 1
 
+
 def get_weather_id(weather_conditions):
     from xml.etree import ElementTree as ET
-    tree = ET.parse('leaderboard/data/weather.xml')
+    tree = ET.parse(Bench2Drive_ROOT+'/leaderboard/data/weather.xml')
     root = tree.getroot()
+
     def conditions_match(weather, conditions):
         for (key, value) in weather:
-            if key == 'route_percentage' : continue
-            if str(getattr(conditions, key))!= value:
+            if key == 'route_percentage': continue
+            if str(getattr(conditions, key)) != value:
                 return False
         return True
+
     for case in root.findall('case'):
         weather = case[0].items()
         if conditions_match(weather, weather_conditions):
             return case.items()[0][1]
     return None
+
 
 class LeaderboardEvaluator(object):
     """
@@ -98,7 +105,7 @@ class LeaderboardEvaluator(object):
 
     # Tunable parameters
     client_timeout = 300.0  # in seconds
-    frame_rate = 20.0      # in Hz
+    frame_rate = 20.0  # in Hz
 
     def __init__(self, args, statistics_manager):
         """
@@ -112,6 +119,7 @@ class LeaderboardEvaluator(object):
         self.sensor_icons = []
         self.agent_instance = None
         self.route_scenario = None
+        self.args=args
 
         self.statistics_manager = statistics_manager
 
@@ -213,31 +221,31 @@ class LeaderboardEvaluator(object):
         """
         self.carla_path = os.environ["CARLA_ROOT"]
 
-        # time.sleep(10*int(args.gpu_rank))
+        time.sleep(10 * int(args.gpu_rank))
         attempts = 0
         num_max_restarts = 20
         while attempts < num_max_restarts:
             try:
-                # args.port = find_free_port(args.port)
-                # #cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
-                # cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
-                # self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
-                # print(cmd1, self.server.returncode, flush=True)
-                # atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
-                # time.sleep(30)
-                # print('start')
+                args.port = find_free_port(args.port)
+                # cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
+                cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
+                self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
+                print(cmd1, self.server.returncode, flush=True)
+                atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
+                time.sleep(30)
+                print('start')
 
                 client = carla.Client(args.host, args.port)
                 if args.timeout:
                     client_timeout = args.timeout
                 client.set_timeout(client_timeout)
-                print('seting',args.port,args.host)
+                print('seting', args.port, args.host)
 
                 settings = carla.WorldSettings(
-                    synchronous_mode = True,
-                    fixed_delta_seconds = 1.0 / self.frame_rate,
-                    deterministic_ragdolls = True,
-                    spectator_as_ego = False
+                    synchronous_mode=True,
+                    fixed_delta_seconds=1.0 / self.frame_rate,
+                    deterministic_ragdolls=True,
+                    spectator_as_ego=False
                 )
                 client.get_world().apply_settings(settings)
                 print(f"load_world success , attempts={attempts}", flush=True)
@@ -331,7 +339,9 @@ class LeaderboardEvaluator(object):
         crash_message = ""
         entry_status = "Started"
 
-        print("\n\033[1m========= Preparing {} (repetition {}) =========\033[0m".format(config.name, config.repetition_index), flush=True)
+        print("\n\033[1m========= Preparing {} (repetition {}) =========\033[0m".format(config.name,
+                                                                                        config.repetition_index),
+              flush=True)
 
         # Prepare the statistics of the route
         route_name = f"{config.name}_rep{config.repetition_index}"
@@ -341,7 +351,8 @@ class LeaderboardEvaluator(object):
         currentDateAndTime = datetime.now()
         currentTime = currentDateAndTime.strftime("%m_%d_%H_%M_%S")
         save_name = f"{route_name}_{town_name}_{scenario_name}_{weather_id}_{currentTime}"
-        self.statistics_manager.create_route_data(route_name, scenario_name, weather_id, save_name, town_name, config.index)
+        self.statistics_manager.create_route_data(route_name, scenario_name, weather_id, save_name, town_name,
+                                                  config.index)
 
         print("\033[1m> Loading the world\033[0m", flush=True)
 
@@ -438,10 +449,10 @@ class LeaderboardEvaluator(object):
 
         except KeyboardInterrupt:
             return True
-        
+
         except TickRuntimeError:
             entry_status, crash_message = "Started", "TickRuntime"
-        
+
         except Exception:
             print("\n\033[91mError during the simulation:", flush=True)
             print(f"\n{traceback.format_exc()}\033[0m", flush=True)
@@ -498,7 +509,8 @@ class LeaderboardEvaluator(object):
             self.statistics_manager.save_progress(route_indexer.index, route_indexer.total)
             self.statistics_manager.write_statistics()
             if crashed:
-                print(f'{route_indexer.index} crash, [{route_indexer.index}/{route_indexer.total}], please restart', flush=True)
+                print(f'{route_indexer.index} crash, [{route_indexer.index}/{route_indexer.total}], please restart',
+                      flush=True)
                 break
 
         # Shutdown ROS1 bridge server if necessary
@@ -510,28 +522,38 @@ class LeaderboardEvaluator(object):
 
         if not crashed:
             # Save global statistics
-            print(f"cost time={time.time()-t1}", flush=True)
+            print(f"cost time={time.time() - t1}", flush=True)
             print("\033[1m> Registering the global statistics\033[0m", flush=True)
             self.statistics_manager.compute_global_statistics()
             self.statistics_manager.validate_and_write_statistics(self.sensors_initialized, crashed)
-        
+
         if crashed:
-            cmd2 = "ps -ef | grep '-graphicsadapter="+ str(args.gpu_rank) + "' | grep -v grep | awk '{print $2}' | xargs -r kill -9"
+            cmd2 = "ps -ef | grep '-graphicsadapter=" + str(
+                args.gpu_rank) + "' | grep -v grep | awk '{print $2}' | xargs -r kill -9"
             server = subprocess.Popen(cmd2, shell=True, preexec_fn=os.setsid)
             atexit.register(os.killpg, server.pid, signal.SIGKILL)
 
         return crashed
 
-def main():
+
+def init(gpu_rank):
     description = "CARLA AD Leaderboard Evaluation: evaluate your Agent in CARLA scenarios\n"
+
+    BASE_PORT = 30000
+    BASE_TM_PORT = 50000
+
+    PORT =BASE_PORT + gpu_rank * 150
+    TM_PORT =BASE_TM_PORT + gpu_rank * 150
+    BASE_ROUTES =Bench2Drive_ROOT+ "/leaderboard/data/bench2drive220"
+    ROUTES = BASE_ROUTES+"_"+ str(gpu_rank)+"_pad_traj.xml"
 
     # general parameters
     parser = argparse.ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--host', default='localhost',
                         help='IP of the host server (default: localhost)')
-    parser.add_argument('--port', default=2000, type=int,
+    parser.add_argument('--port', default=PORT, type=int,
                         help='TCP port to listen to (default: 2000)')
-    parser.add_argument('--traffic-manager-port', default=8000, type=int,
+    parser.add_argument('--traffic-manager-port', default=TM_PORT, type=int,
                         help='Port to use for the TrafficManager (default: 8000)')
     parser.add_argument('--traffic-manager-seed', default=0, type=int,
                         help='Seed used by the TrafficManager (default: 0)')
@@ -543,7 +565,7 @@ def main():
                         help='Set the CARLA client timeout value in seconds')
 
     # simulation setup
-    parser.add_argument('--routes', required=True,
+    parser.add_argument('--routes', default=ROUTES,
                         help='Name of the routes file to be executed.')
     parser.add_argument('--routes-subset', default='', type=str,
                         help='Execute a specific set of routes')
@@ -551,32 +573,32 @@ def main():
                         help='Number of repetitions per route.')
 
     # agent-related options
-    parser.add_argument("-a", "--agent", type=str,
-                        help="Path to Agent's py file to evaluate", required=True)
-    parser.add_argument("--agent-config", type=str,
-                        help="Path to Agent's configuration file", default="")
+    parser.add_argument("-a", "--agent", type=str,default=Bench2Drive_ROOT+"/leaderboard/pad_team_code/pad_b2d_agent.py",
+                        help="Path to Agent's py file to evaluate")
+    parser.add_argument("--agent-config", type=str,default="",
+                        help="Path to Agent's configuration file")
 
     parser.add_argument("--track", type=str, default='SENSORS',
                         help="Participation track: SENSORS, MAP")
     parser.add_argument('--resume', type=bool, default=False,
                         help='Resume execution from last checkpoint?')
-    parser.add_argument("--checkpoint", type=str, default='./simulation_results.json',
+    parser.add_argument("--checkpoint", type=str, default="",
                         help="Path to checkpoint used for saving statistics and resuming")
     parser.add_argument("--debug-checkpoint", type=str, default='./live_results.txt',
                         help="Path to checkpoint used for saving live results")
-    parser.add_argument("--gpu-rank", type=int, default=0)
+    parser.add_argument("--gpu-rank", type=int, default=gpu_rank)
     arguments = parser.parse_args()
 
     statistics_manager = StatisticsManager(arguments.checkpoint, arguments.debug_checkpoint)
     leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager)
-    crashed = leaderboard_evaluator.run(arguments)
 
-    del leaderboard_evaluator
+    return leaderboard_evaluator
 
-    if crashed:
-        sys.exit(-1)
-    else:
-        sys.exit(0)
+def run(leaderboard_evaluator,endpoint,checkpoint_path):
 
-if __name__ == '__main__':
-    main()
+
+    leaderboard_evaluator.args.agent_config=Bench2Drive_ROOT+"/leaderboard/pad_team_code/pad_config.py+"+checkpoint_path
+    leaderboard_evaluator.statistics_manager._endpoint=endpoint
+
+    crashed = leaderboard_evaluator.run(leaderboard_evaluator.args)
+

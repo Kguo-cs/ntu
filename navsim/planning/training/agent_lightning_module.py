@@ -1,3 +1,5 @@
+from time import sleep
+
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -10,6 +12,14 @@ import os
 import subprocess
 import shutil
 import json
+from Bench2Drive.leaderboard.leaderboard import pad_evaluator,start_carla
+import threading
+import sys
+import io
+import time
+from contextlib import redirect_stdout
+
+
 
 class AgentLightningModule(pl.LightningModule):
     """Pytorch lightning wrapper for learnable agent."""
@@ -22,6 +32,12 @@ class AgentLightningModule(pl.LightningModule):
         super().__init__()
         self.agent = agent
         self.checkpoint_file=None
+
+        if self.agent.b2d:
+
+            start_carla.run(self.global_rank)
+
+
 
     def _step(self, batch: Tuple[Dict[str, Tensor], Dict[str, Tensor]], logging_prefix: str) -> Tensor:
         """
@@ -91,11 +107,9 @@ class AgentLightningModule(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         if self.agent.b2d and self.checkpoint_file is not None:
-            subprocess.run(['bash', os.getenv('Bench2Drive_ROOT')+'/leaderboard/scripts/clean_carla.sh', str(self.global_rank)])
-            subprocess.run(["pkill", "-9", "-f", "leaderboard_evaluator"])
-            subprocess.run(["pkill", "-9", "-f", "carla"])
 
             folder_path=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
+            subprocess.run(["pkill", "-9", "-f", "leaderboard_evaluator"])
 
             file_paths = glob.glob(f'{folder_path}/*.json')
             merged_records = []

@@ -12,14 +12,6 @@ import os
 import subprocess
 import shutil
 import json
-from Bench2Drive.leaderboard.leaderboard import start_carla
-import threading
-import sys
-import io
-import time
-from contextlib import redirect_stdout
-
-
 
 class AgentLightningModule(pl.LightningModule):
     """Pytorch lightning wrapper for learnable agent."""
@@ -146,7 +138,11 @@ class AgentLightningModule(pl.LightningModule):
     def on_train_epoch_start(self):
         if  self.agent.b2d:
             if self.global_step==0:
-                start_carla.run(self.global_rank)
+                run_start_carla='leaderboard/scripts/run_start_carla.sh'
+
+                command = ['bash', run_start_carla, str(self.global_rank)]
+
+                subprocess.run(command, cwd=os.getenv('Bench2Drive_ROOT'))
             else:
                 checkpoint_path=self.trainer.default_root_dir+"/lightning_logs/version_0/checkpoints"
                 for checkpoint_file in os.listdir(checkpoint_path):

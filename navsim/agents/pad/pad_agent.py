@@ -33,7 +33,6 @@ class PadAgent(AbstractAgent):
         if not cache_data:
             self._pad_model = PadModel(config)
 
-
         if not cache_data and self._checkpoint_path == "":#only for training
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d

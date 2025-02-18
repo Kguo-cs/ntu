@@ -57,8 +57,7 @@ def find_free_port(starting_port):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--gpu_rank', default=0,
-                    help='IP of the host server (default: localhost)')
+parser.add_argument('--gpu_rank', default=0,help='IP of the host server (default: localhost)')
 arguments = parser.parse_args()
 gpu_rank=int(arguments.gpu_rank)
 time.sleep(10 * gpu_rank)

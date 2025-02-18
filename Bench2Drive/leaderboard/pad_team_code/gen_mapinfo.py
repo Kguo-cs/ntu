@@ -18,6 +18,7 @@ sys.path.append(CARLA_ROOT + "/PythonAPI")
 sys.path.append(CARLA_ROOT + "/PythonAPI/carla")
 
 sys.path.append(CARLA_ROOT + "/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg")
+max_dist=0
 
 class LankMarkingGettor(object):
     '''
@@ -41,7 +42,7 @@ class LankMarkingGettor(object):
     '''
 
     @staticmethod
-    def get_lanemarkings(carla_map, lane_marking_dict={}, pixels_per_meter=2, precision=0.05):
+    def get_lanemarkings(carla_map,max_dist, lane_marking_dict={}, pixels_per_meter=2, precision=0.05):
 
         topology = [x[0] for x in carla_map.get_topology()]
         topology = sorted(topology, key=lambda w: w.road_id)
@@ -62,21 +63,29 @@ class LankMarkingGettor(object):
                         nxt = nxt[0]
                     else:
                         break
-            print("current road id: ", waypoint.road_id)
-            print("lane id:", waypoint.lane_id)
+            # print("current road id: ", waypoint.road_id)
+            # print("lane id:", waypoint.lane_id)
             maps=[]
             for waypoint in waypoints:
                 w_transform=waypoint.transform
                 road_lane_id=waypoint.road_id+waypoint.lane_id*0.001
                 maps.append((w_transform.location.x,-w_transform.location.y,waypoint.lane_width*0.5,road_lane_id))
 
-            maps=np.array(maps).astype(np.float32)[::10]
+            maps=np.array(maps).astype(np.float32)[::20]
+
+            if len(maps)>1:
+
+                way_dist=np.linalg.norm(maps[1:,:2]-maps[:-1,:2],axis=-1)
+
+                width=np.maximum(maps[1:,2],maps[:-1,2])
+
+                maps[:-1,2]=np.sqrt(way_dist*way_dist/4+width*width)
 
             map_list.append(maps)
 
         all_map=np.concatenate(map_list)
 
-        return all_map
+        return all_map,max_dist
 
 
 
@@ -89,17 +98,18 @@ if __name__ == '__main__':
     client = carla.Client('localhost', 20001)
     client.set_timeout(300)
 
-    for id in ['01','02','03','04','05','06','07','10HD','11','12','13','15']:
+    for id in ['11','01','02','03','04','05','06','07','10HD','12','13','15']:
         carla_town = 'Town'+id
 
         world = client.load_world(carla_town)
         print("******** sucessfully load the town:", carla_town, " ********")
         carla_map = world.get_map()
 
-        arr = LankMarkingGettor.get_lanemarkings(world.get_map())
+        arr,max_dist = LankMarkingGettor.get_lanemarkings(world.get_map(),max_dist)
         print("****** get all lanemarkings ******")
 
         map_dict[carla_town[:6]]=arr
+        # time.sleep(100)
 
     with open(os.getenv('NAVSIM_EXP_ROOT') + "/map.pkl", 'wb') as f:
         pickle.dump(map_dict, f)

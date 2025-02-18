@@ -114,7 +114,7 @@ def get_scores(args):
 
     return [get_sub_score(a["token"],a["poses"],a["target_trajectory"],a["lidar2world"],a["nearby_point"]) for a in args]
 
-def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearby_point):
+def get_sub_score(fut_box_corners,proposals,target_trajectory,lidar2world,nearby_point):
 
     fut_mask=fut_box_corners.all(-1).all(-1)
 
@@ -126,11 +126,9 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
 
     ttc=1-ttc_collision.any(-1)
 
-    z = lidar2world[2, 3]
-
     ego_corners=np.concatenate([ego_corners, all_proposals[:,:,None,:2]],axis=-2)
 
-    ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1])+z,np.ones_like(ego_corners[...,:1])],axis=-1)
+    ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1]),np.ones_like(ego_corners[...,:1])],axis=-1)
 
     global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
 
@@ -144,15 +142,13 @@ def get_sub_score( fut_box_corners,proposals,target_trajectory,lidar2world,nearb
 
     on_road_all=on_road.any(0).all(-1)
 
-    nearest_road=np.argmin(dist_to_center-center_width[:,None,None,None],axis=0)
+    center_nearest_road=np.argmin(dist_to_center[:,:,:,-1]-center_width[:,None,None],axis=0)
 
-    nearest_lane_id=center_laneid[nearest_road]
-
-    nearest_road_id=np.round(nearest_lane_id)
+    nearest_road_id=np.round(center_laneid[center_nearest_road])
 
     target_road_id=np.unique(nearest_road_id[-1]) 
 
-    proposal_center_road_id=nearest_road_id[:-1,:,-1]
+    proposal_center_road_id=nearest_road_id[:-1]
 
     on_route_all=np.isin(proposal_center_road_id, target_road_id) 
 

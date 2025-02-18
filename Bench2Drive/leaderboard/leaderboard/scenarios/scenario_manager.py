@@ -179,7 +179,7 @@ class ScenarioManager(object):
             self.tick_count += 1
             self._watchdog.pause()
 
-            if self.tick_count > 2000: #4000:
+            if self.tick_count > 1800: #4000:
                 raise TickRuntimeError("RuntimeError, tick_count > 4000")
 
             try:

@@ -92,7 +92,8 @@ class AgentLightningModule(pl.LightningModule):
     def on_validation_epoch_end(self) -> None:
         if self.agent.b2d and self.checkpoint_file is not None:
             subprocess.run(['bash', os.getenv('Bench2Drive_ROOT')+'/leaderboard/scripts/clean_carla.sh', str(self.global_rank)])
-            subprocess.run(["pkill", "-9", "-f", "run_evaluation.sh"])
+            subprocess.run(["pkill", "-9", "-f", "leaderboard_evaluator"])
+            subprocess.run(["pkill", "-9", "-f", "carla"])
 
             folder_path=self.trainer.default_root_dir+'/res_'+self.checkpoint_file[:-5]
 

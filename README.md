@@ -2,6 +2,7 @@
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
 qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
+ssh ke.guo@aspire2antu.nscc.sg
 
 sudo apt install gcc g++ -y
 export no_proxy=localhost,127.0.0.1,10.104.0.0/21
@@ -17,14 +18,14 @@ enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scr
 enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
 cd /home/users/ntu/lyuchen/scratch/keguo_projects/ntu
-conda activate Pad
-python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc0_1.log 2>&1 & tail -f B2d32_acc0_1.log
+conda activate pad
+python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2d_training.py > B2d32_acc_cuda121.log 2>&1 & tail -f B2d32_acc_cuda121.log
 
-bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 1 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0/02.13_10.56/res_epoch=0-step=768
+bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0_pip_cuda122_qsub/02.15_12.22/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 3 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0_pip_cuda122_qsub/02.15_12.22/res_epoch=0-step=768
 
 
 qstat -ans
-export PBS_JOBID=27317.pbs111
+export PBS_JOBID=27844.pbs111
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 sh cuda_12.1.1_530.30.02_linux.run  --toolkitpath=/home/users/ntu/lyuchen/scratch/keguo_projects/cuda --toolkit --silent

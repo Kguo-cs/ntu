@@ -125,11 +125,14 @@ class PadAgent(AbstractAgent):
                                                                  target_traj):
                 all_lane_points = self.map_infos[town_name[:6]]
 
-                xy=lidar2world[0:2, 3]
+                mid_points=target_poses[2:3]
+
+                xyz=np.concatenate([mid_points[...,:2],np.zeros_like(mid_points[...,:1]),np.ones_like(mid_points[...,:1])],axis=-1)
+                xy = np.einsum("ij,nj->ni", lidar2world, xyz)[0, :2]
 
                 dist_to_cur = np.linalg.norm(all_lane_points[:,:2] - xy, axis=-1)
 
-                nearby_point = all_lane_points[dist_to_cur < 50]
+                nearby_point = all_lane_points[dist_to_cur < 25]
 
                 data_dict = {
                     "token": metric_cache_paths[token],

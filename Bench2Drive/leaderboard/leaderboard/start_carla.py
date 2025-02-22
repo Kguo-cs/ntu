@@ -71,12 +71,12 @@ while attempts < num_max_restarts:
         cmd1 = f"enroot start --rw --mount {carla_path}:{carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={port} -graphicsadapter={gpu_rank}'"
         server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
         print(cmd1, server.returncode, flush=True)
-        atexit.register(os.killpg, server.pid, signal.SIGKILL)
+        # atexit.register(os.killpg, server.pid, signal.SIGKILL)
         time.sleep(30)
         print('start')
 
         client = carla.Client(host, port)
-        client.set_timeout(100)
+        client.set_timeout(200)
         print('seting', port, host)
 
         settings = carla.WorldSettings(

@@ -15,6 +15,7 @@ from navsim.common.dataloader import MetricCacheLoader
 from navsim.common.dataclasses import SensorConfig
 from navsim.agents.pad.pad_features import PadTargetBuilder
 from navsim.agents.pad.pad_features import PadFeatureBuilder
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 class PadAgent(AbstractAgent):
     def __init__(
@@ -42,7 +43,7 @@ class PadAgent(AbstractAgent):
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
-                self.worker = RayDistributedNoTorch(threads_per_node=4)
+                self.worker = RayDistributedNoTorch(threads_per_node=8)
                 self.worker_map=worker_map
 
             if config.b2d:
@@ -251,7 +252,7 @@ class PadAgent(AbstractAgent):
 
             inter_loss = self.diversity_loss(proposals_i)
 
-            trajectory_loss = 0.1 * trajectory_loss  + min_loss+ inter_loss * config.inter_weight
+            trajectory_loss = config.prev_weight * trajectory_loss  + min_loss+ inter_loss * config.inter_weight
 
             min_loss_list.append(min_loss)
             inter_loss_list.append(inter_loss)
@@ -308,7 +309,7 @@ class PadAgent(AbstractAgent):
         return self.pad_loss(targets, pred, self._config)
 
     def get_optimizers(self):
-        return torch.optim.Adam(self._pad_model.parameters(), lr=self._lr)
+        return torch.optim.AdamW(self._pad_model.parameters(), lr=self._lr,weight_decay=1e-4)
 
     def get_training_callbacks(self):
 

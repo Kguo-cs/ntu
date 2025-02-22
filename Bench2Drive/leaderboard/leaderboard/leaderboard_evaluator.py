@@ -213,24 +213,26 @@ class LeaderboardEvaluator(object):
         """
         self.carla_path = os.environ["CARLA_ROOT"]
 
-        # time.sleep(10*int(args.gpu_rank))
+        task_id=(int(args.port)-20000)/150
+
+        time.sleep(10*task_id)
         attempts = 0
         num_max_restarts = 20
         while attempts < num_max_restarts:
             try:
-                # args.port = find_free_port(args.port)
-                # #cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
-                # cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
-                # self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
-                # print(cmd1, self.server.returncode, flush=True)
-                # atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
-                # time.sleep(30)
-                # print('start')
+                args.port = find_free_port(args.port)
+                #cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
+                cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
+                self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
+                print(cmd1, self.server.returncode, flush=True)
+                atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
+                time.sleep(30)
+                print('start')
 
                 client = carla.Client(args.host, args.port)
                 if args.timeout:
                     client_timeout = args.timeout
-                client.set_timeout(client_timeout)
+                client.set_timeout(100)
                 print('seting',args.port,args.host)
 
                 settings = carla.WorldSettings(
@@ -243,9 +245,11 @@ class LeaderboardEvaluator(object):
                 print(f"load_world success , attempts={attempts}", flush=True)
                 break
             except Exception as e:
+                subprocess.run(['kill','-9', str(self.server.pid)])
                 print(f"load_world failed , attempts={attempts}", flush=True)
                 print(e, flush=True)
                 attempts += 1
+                args.port=args.port+1
                 time.sleep(5)
         attempts = 0
         num_max_restarts = 40

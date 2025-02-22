@@ -1,7 +1,7 @@
 
 lyuchen@aspire2pntu.nscc.sg
 automan123!!
-qsub -I -l select=1:ngpus=8 -l walltime=120:00:00 -P 12002486
+qsub -I -l select=1:ngpus=1 -l walltime=1:00:00 -P 12002486
 ssh ke.guo@aspire2antu.nscc.sg
 
 sudo apt install gcc g++ -y
@@ -13,7 +13,7 @@ mim install mmcv-full==1.7.2
 
 enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
 enroot start --mount /home/users/ntu/lyuchen/scratch:/home/users/ntu/lyuchen/scratch  --mount /home/users/ntu/lyuchen/miniconda3:/home/users/ntu/lyuchen/miniconda3 -w carla bash
-
+enroot start --rw --mount /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla:/home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '/home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla/CarlaUE4.sh -RenderOffScreen -nosound -carla-rpc-port=20004 -graphicsadapter=4'
 
 enroot create --name carla /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/carla2.sqsh
 source "/home/users/ntu/lyuchen/miniconda3/bin/activate"
@@ -25,7 +25,7 @@ bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/k
 
 
 qstat -ans
-export PBS_JOBID=27844.pbs111
+export PBS_JOBID=28898.pbs111
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 sh cuda_12.1.1_530.30.02_linux.run  --toolkitpath=/home/users/ntu/lyuchen/scratch/keguo_projects/cuda --toolkit --silent

@@ -5,16 +5,19 @@ from shapely.creation import linestrings
 from shapely import Point, creation
 
 
-def compute_corners(boxes):
-    # Calculate half dimensions
-    x = boxes[:, 0]        # x-coordinate of the center
-    y = boxes[:, 1]        # y-coordinate of the center
-    half_width = boxes[:, 2]  / 2
-    half_length = boxes[:, 3]  / 2
-    headings= boxes[:, 4]
+def compute_corners(proposals):
 
-    cos_yaw = np.cos(headings)[...,None]
-    sin_yaw = np.sin(headings)[...,None]
+    headings= proposals[...,2]
+    cos_yaw = np.cos(headings)
+    sin_yaw = np.sin(headings)
+
+    x = proposals[..., 0] + 0.39 * cos_yaw
+    y = proposals[..., 1] + 0.39 * sin_yaw
+    half_width = 0.925 + np.zeros_like(headings)
+    half_length = 2.042 + np.zeros_like(headings)
+
+    cos_yaw = cos_yaw[..., None]
+    sin_yaw = sin_yaw[..., None]
 
     # Compute the four corners
     corners_x = np.stack([half_length, half_length, -half_length, -half_length],axis=-1)
@@ -29,7 +32,33 @@ def compute_corners(boxes):
 
     return corners
 
-ego_width, ego_length = 0.925*2, 2.042*2
+
+def compute_corners_torch(proposals):
+
+    headings= proposals[...,2]
+    cos_yaw = torch.cos(headings)
+    sin_yaw = torch.sin(headings)
+
+    x = proposals[...,0]+0.39*cos_yaw
+    y = proposals[...,1]+0.39*sin_yaw
+    half_width = 0.925+torch.zeros_like(headings)
+    half_length=  2.042+torch.zeros_like(headings)
+
+    cos_yaw=cos_yaw[...,None]
+    sin_yaw=sin_yaw[...,None]
+
+    # Compute the four corners
+    corners_x = torch.stack([half_length, half_length, -half_length, -half_length],dim=-1)
+    corners_y = torch.stack([half_width, -half_width, -half_width, half_width],dim=-1)
+
+    # Rotate corners by yaw
+    rot_corners_x = cos_yaw * corners_x + (-sin_yaw) * corners_y
+    rot_corners_y = sin_yaw * corners_x + cos_yaw * corners_y
+
+    # Translate corners to the center of the bounding box
+    corners = torch.stack((rot_corners_x + x[...,None], rot_corners_y + y[...,None]), dim=-1)
+
+    return corners
 
 def eval_single(ego_corners,fut_corners,fut_mask):
 
@@ -65,34 +94,23 @@ def eval_single(ego_corners,fut_corners,fut_mask):
 
     return False,ttc_collsion,np.zeros([6,4,2]), np.zeros([6]),ttc_agent,ttc_agent_mask
 
-def evaluate_coll( proposals,fut_corners,fut_mask):
-    n_future = proposals.shape[1]
-
-    proposals1=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
-
-    vel=proposals1[:,1:,:2]-proposals1[:,:-1,:2]
-
-    proposals_05=np.concatenate([proposals[:,:,:2]+vel,proposals[:,:,2:]],axis=-1)
-
-    #proposals_10=np.concatenate([proposals[:,:,:2]+vel*2, proposals[:,:,2:]],axis=-1)
-
-    proposals=np.stack([proposals,proposals_05],axis=2)#,proposals_10
-
-    ego_box = np.zeros((proposals.shape[0],n_future,proposals.shape[2], 5))
-
-    heading= proposals[...,2]
-
-    ego_box[..., 0] = proposals[...,0]+0.39*np.cos(heading)
-    ego_box[..., 1] = proposals[...,1]+0.39*np.sin(heading)
-    ego_box[..., 2] = ego_width
-    ego_box[..., 3] = ego_length
-    ego_box[..., 4] = proposals[...,2]
-
-    ego_corners=compute_corners(ego_box.reshape(-1,5)).reshape(-1,n_future,proposals.shape[2],4,2)
+def evaluate_coll( ttc_corners,fut_corners,fut_mask):
+    n_future = ttc_corners.shape[1]
+    #
+    # proposals1=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
+    #
+    # vel=proposals1[:,1:,:2]-proposals1[:,:-1,:2]
+    #
+    # proposals_05=np.concatenate([proposals[:,:,:2]+vel,proposals[:,:,2:]],axis=-1)
+    #
+    # #proposals_10=np.concatenate([proposals[:,:,:2]+vel*2, proposals[:,:,2:]],axis=-1)
+    #
+    # proposals=np.stack([proposals,proposals_05],axis=2)#,proposals_10
+    #
+    # ego_corners=compute_corners(proposals.reshape(-1,3)).reshape(-1,n_future,proposals.shape[2],4,2)
 
     num_col=2
-    n_proposal = proposals.shape[0]-1
-
+    n_proposal = ttc_corners.shape[0]-1
 
     key_agent_corners = np.zeros([n_proposal,num_col, 6, 4, 2])
     key_agent_labels = np.zeros([n_proposal,num_col, 6],dtype=bool)
@@ -100,7 +118,7 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
     ttc_collision_all = np.zeros([n_proposal,n_future])
 
     for i in range(n_proposal):
-        collision_all_i,ttc_collision_i,collision_agent_i,collision_agent_mask_i,ttc_agent_i,ttc_agent_mask_i=eval_single(ego_corners[i],fut_corners,fut_mask)
+        collision_all_i,ttc_collision_i,collision_agent_i,collision_agent_mask_i,ttc_agent_i,ttc_agent_mask_i=eval_single(ttc_corners[i],fut_corners,fut_mask)
         collision_all[i]=collision_all_i
         ttc_collision_all[i]=ttc_collision_i
         key_agent_corners[i,0,:len(collision_agent_i)]=collision_agent_i
@@ -108,67 +126,67 @@ def evaluate_coll( proposals,fut_corners,fut_mask):
         key_agent_corners[i,1,:len(ttc_agent_i)]=ttc_agent_i
         key_agent_labels[i,1,:len(ttc_agent_mask_i)]=ttc_agent_mask_i
 
-    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels,ego_corners[:,:,0]
+    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels,ttc_corners[:,:,0]
 
 def get_scores(args):
 
-    return [get_sub_score(a["token"],a["poses"],a["target_trajectory"],a["lidar2world"],a["nearby_point"]) for a in args]
+    return [get_sub_score(a["fut_box_corners"],a["min_index"],a["comfort"],a["on_road_all"],a["on_route_all"],a["ttc_corners"]) for a in args]
 
-def get_sub_score(fut_box_corners,proposals,target_trajectory,lidar2world,nearby_point):
+def get_sub_score(fut_box_corners,min_index,comfort,on_road_all,on_route_all,ttc_corner):
 
     fut_mask=fut_box_corners.all(-1).all(-1)
 
-    all_proposals=np.concatenate([proposals,target_trajectory[None]],axis=0)
+    #all_proposals=np.concatenate([proposals,target_trajectory[None]],axis=0)
 
-    collsions,ttc_collision,key_agent_corners,key_agent_labels,ego_corners=evaluate_coll(all_proposals,fut_box_corners,fut_mask)
+    collsions,ttc_collision,key_agent_corners,key_agent_labels,ego_corners=evaluate_coll(ttc_corner,fut_box_corners,fut_mask)
 
     collision=1-collsions.any(-1)
 
     ttc=1-ttc_collision.any(-1)
 
-    ego_corners=np.concatenate([ego_corners, all_proposals[:,:,None,:2]],axis=-2)
+    # ego_corners=np.concatenate([ego_corners, all_proposals[:,:,None,:2]],axis=-2)
+    #
+    # ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1]),np.ones_like(ego_corners[...,:1])],axis=-1)
+    #
+    # global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
 
-    ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1]),np.ones_like(ego_corners[...,:1])],axis=-1)
-
-    global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
-
-    center_xy=nearby_point[:,:2]
-    center_width=nearby_point[:,2]
-    center_laneid=nearby_point[:,-1]
-
-    dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
-
-    on_road=dist_to_center[:,:-1]<center_width[:,None,None,None]
-
-    on_road_all=on_road.any(0).all(-1)
-
-    center_nearest_road=np.argmin(dist_to_center[:,:,:,-1]-center_width[:,None,None],axis=0)
-
-    nearest_road_id=np.round(center_laneid[center_nearest_road])
-
-    target_road_id=np.unique(nearest_road_id[-1]) 
-
-    proposal_center_road_id=nearest_road_id[:-1]
-
-    on_route_all=np.isin(proposal_center_road_id, target_road_id) 
+    # center_xy=nearby_point[:,:2]
+    # center_width=nearby_point[:,2]
+    # center_laneid=nearby_point[:,-1]
+    #
+    # dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
+    #
+    # on_road=dist_to_center[:,:-1]<center_width[:,None,None,None]
+    #
+    # on_road_all=on_road.any(0).all(-1)
+    #
+    # center_nearest_road=np.argmin(dist_to_center[:,:,:,-1]-center_width[:,None,None],axis=0)
+    #
+    # nearest_road_id=np.round(center_laneid[center_nearest_road])
+    #
+    # target_road_id=np.unique(nearest_road_id[-1])
+    #
+    # proposal_center_road_id=nearest_road_id[:-1]
+    #
+    # on_route_all=np.isin(proposal_center_road_id, target_road_id)
 
     drivable_area_compliance=on_road_all.all(-1) & on_route_all.all(-1)
 
     ego_areas=np.stack([on_road_all,on_route_all],axis=-1)
 
-    l2= np.linalg.norm(proposals[...,:2] - target_trajectory[ None,...,:2],axis=-1).mean(-1)
+    # l2= np.linalg.norm(proposals[...,:2] - target_trajectory[ None,...,:2],axis=-1).mean(-1)
+    #
+    # min_index=np.argmin(l2,axis=0)
     
-    min_index=np.argmin(l2,axis=0)
-    
-    progress =np.zeros([len(proposals)])
-    
+    progress =np.zeros([len(on_road_all)])
+
     progress[min_index]=1
 
-    proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
-
-    vel=(proposals_xy[:,1:,:2]-proposals_xy[:,:-1,:2])/0.5
-
-    acc=np.linalg.norm(vel[:,1:]-vel[:,:-1],axis=-1)/0.5
+    # proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
+    #
+    # vel=(proposals_xy[:,1:,:2]-proposals_xy[:,:-1,:2])/0.5
+    #
+    # acc=np.linalg.norm(vel[:,1:]-vel[:,:-1],axis=-1)/0.5
 
     # angle=np.arctan2(vel[:,:,1], vel[:,:,0])
 
@@ -180,7 +198,7 @@ def get_sub_score(fut_box_corners,proposals,target_trajectory,lidar2world,nearby
 
     # desired_speed=np.linalg.norm(vel,axis=-1).mean(-1)
     
-    comfort=(acc<10).all(-1) #& (desired_speed<15) & (np.abs(yaw_rate)<2).all(-1) & (np.abs(yaw_accel)<4).all(-1)
+    # comfort=(acc<10).all(-1) #& (desired_speed<15) & (np.abs(yaw_rate)<2).all(-1) & (np.abs(yaw_accel)<4).all(-1)
 
     progress=collision*drivable_area_compliance*progress
 

@@ -17,6 +17,7 @@ from navsim.agents.pad.pad_features import PadTargetBuilder
 from navsim.agents.pad.pad_features import PadFeatureBuilder
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 import math
+from .score_module.compute_b2d_score import compute_corners_torch
 
 class PadAgent(AbstractAgent):
     def __init__(
@@ -59,6 +60,9 @@ class PadAgent(AbstractAgent):
 
                 with open(map_file, 'rb') as f:
                     self.map_infos = pickle.load(f)
+
+                for key,value in self.map_infos.items():
+                    self.map_infos[key]=torch.tensor(value).cuda()
             else:
                 from .score_module.compute_navsim_score import get_scores
 
@@ -108,21 +112,29 @@ class PadAgent(AbstractAgent):
 
     def compute_score(self, targets, proposals, test=True):
 
-        target_trajectory = targets["trajectory"]
 
         if self.training:
             metric_cache_paths = self.train_metric_cache_paths
         else:
             metric_cache_paths = self.test_metric_cache_paths
 
-        trajectory = proposals.detach().cpu().numpy()
+        target_trajectory = targets["trajectory"].detach()
+        proposals=proposals.detach()
 
-        target_traj = target_trajectory.detach().cpu().numpy()
+        trajectory = proposals.cpu().numpy()
+        target_traj = target_trajectory.cpu().numpy()
 
         if self.b2d:
             data_points = []
-            
-            all_pos = torch.cat([proposals.detach(), target_trajectory.detach()[:,None]],dim=1)[:, :,:, :2].reshape(len(target_traj),-1, 2)
+
+            lidar2worlds=targets["lidar2world"]
+
+            all_proposals = torch.cat([proposals, target_trajectory[None]], dim=1)
+
+            all_proposals_xy=all_proposals[:, :,:, :2]
+            all_proposals_heading=all_proposals[:, :,:, 2:]
+
+            all_pos = all_proposals_xy.reshape(len(target_traj),-1, 2)
 
             mid_points = (all_pos.amax(1) + all_pos.amin(1)) / 2
 
@@ -131,23 +143,69 @@ class PadAgent(AbstractAgent):
             xyz = torch.cat(
                 [mid_points[..., :2], torch.zeros_like(mid_points[..., :1]), torch.ones_like(mid_points[..., :1])], dim=-1)
 
-            xys = torch.einsum("nij,nj->ni", targets["lidar2world"], xyz)[:, :2]
+            xys = torch.einsum("nij,nj->ni", lidar2worlds, xyz)[:, :2]
 
-            for token, town_name, lidar2world, poses, target_poses, dist, xy in zip(targets["token"], targets["town_name"],
-                                                                 targets["lidar2world"].cpu().numpy(), trajectory,
-                                                                 target_traj,dists.cpu().numpy(), xys.cpu().numpy()):
+            vel = all_proposals_xy[:,:, 1:] - all_proposals_xy[:,:, :-1]
+
+            vel=torch.cat([all_proposals_xy[:, :,:1],vel],dim=2)/ 0.5
+
+            proposals_05 = torch.cat([all_proposals_xy + vel*0.5, all_proposals_heading], dim=-1)
+
+            proposals_ttc = torch.stack([all_proposals, proposals_05], dim=3)
+
+            ego_corners_ttc = compute_corners_torch(proposals_ttc.reshape(-1, 3)).reshape(proposals_ttc.shape[0],proposals_ttc.shape[1], proposals_ttc.shape[2],2,  4, 2)
+
+            ego_corners_center = torch.cat([ego_corners_ttc[:,:,:,0], all_proposals_xy[:, :, :, None]], dim=-2)
+
+            ego_corners_center_xyz = torch.cat(
+                [ego_corners_center, torch.zeros_like(ego_corners_center[..., :1]), torch.ones_like(ego_corners_center[..., :1])], dim=-1)
+
+            global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[..., :2]
+
+            l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[None, ..., :2], dim=-1).mean(-1)
+
+            min_indexs = torch.argmin(l2, dim=1)
+
+            vel=vel[:,:-1]
+
+            accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
+
+            comforts = (accs < 10).all(-1)
+
+            for token, town_name, min_index, comfort, dist, xy,global_conners,ttc_corners in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]
 
-                dist_to_cur = np.linalg.norm(all_lane_points[:,:2] - xy, axis=-1)
+                dist_to_cur = torch.linalg.norm(all_lane_points[:,:2] - xy, dim=-1)
 
                 nearby_point = all_lane_points[dist_to_cur < dist]
 
+                center_xy = nearby_point[:, :2]
+                center_width = nearby_point[:, 2]
+                center_laneid = nearby_point[:, -1]
+
+                dist_to_center = torch.linalg.norm(global_conners[None] - center_xy[:, None, None, None], dim=-1)
+
+                on_road = dist_to_center[:, :-1] < center_width[:, None, None, None]
+
+                on_road_all = on_road.any(0).all(-1)
+
+                center_nearest_road = torch.argmin(dist_to_center[:, :, :, -1] - center_width[:, None, None], dim=0)
+
+                nearest_road_id = torch.round(center_laneid[center_nearest_road])
+
+                target_road_id = torch.unique(nearest_road_id[-1])
+
+                proposal_center_road_id = nearest_road_id[:-1]
+
+                on_route_all = torch.isin(proposal_center_road_id, target_road_id)
+
                 data_dict = {
-                    "token": metric_cache_paths[token],
-                    "target_trajectory": target_poses,
-                    "poses": poses,
-                    "lidar2world": lidar2world,
-                    "nearby_point": nearby_point
+                    "fut_box_corners": metric_cache_paths[token],
+                    "min_index": min_index,
+                    "comfort": comfort,
+                    "on_road_all": on_road_all.cpu().numpy(),
+                    "on_route_all": on_route_all.cpu().numpy(),
+                    "ttc_corners":ttc_corners
                 }
                 data_points.append(data_dict)
         else:

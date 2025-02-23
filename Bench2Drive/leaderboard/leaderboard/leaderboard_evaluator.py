@@ -265,6 +265,7 @@ class LeaderboardEvaluator(object):
                 print(f"traffic_manager init fail, try_time={attempts}", flush=True)
                 print(e, flush=True)
                 attempts += 1
+                args.traffic_manager_port=args.traffic_manager_port+1
                 time.sleep(5)
         return client, client_timeout, traffic_manager
 

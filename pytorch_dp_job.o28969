@@ -1,0 +1,29 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2025-02-23 13:50:02.958051:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 28969.pbs111
+	Project: 12002486
+	Exit Status: 271
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(56), Used(56)
+	CPU Time Used: 11:40:29
+	Memory: Requested(940gb), Used(573005496kb)
+	Vmem Used: 27015311164kb
+	Walltime: Requested(24:00:00), Used(00:45:40)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (a2ap-dgx003:ncpus=56:ngpus=4:mem=985661440kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	GPU Duration: 46.42mins
+	GPU Power Consumed: 179.67W
+	GPU Max GPU Memory Used: 151.82GB
+	Memory Throughput Rate (Average): a2ap-dgx003:(gpu1:7%+gpu0:10%+gpu2:7%+gpu3:10%)
+	Memory Throughput Rate (Max): a2ap-dgx003:(gpu1:90%+gpu0:91%+gpu2:90%+gpu3:91%)
+	Memory Throughput Rate (Min): a2ap-dgx003:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%)
+	GPU SM Utilization (Average): a2ap-dgx003:(gpu1:20%+gpu0:20%+gpu2:21%+gpu3:20%)
+	GPU SM Utilization (Max): a2ap-dgx003:(gpu1:100%+gpu0:100%+gpu2:100%+gpu3:100%)
+	GPU SM Utilization (Min): a2ap-dgx003:(gpu1:0%+gpu0:0%+gpu2:0%+gpu3:0%)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Warning: None
+GPU application profile: Low
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+

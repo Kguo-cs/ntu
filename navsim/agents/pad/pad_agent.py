@@ -15,7 +15,8 @@ from navsim.common.dataloader import MetricCacheLoader
 from navsim.common.dataclasses import SensorConfig
 from navsim.agents.pad.pad_features import PadTargetBuilder
 from navsim.agents.pad.pad_features import PadFeatureBuilder
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
+import math
 
 class PadAgent(AbstractAgent):
     def __init__(
@@ -120,20 +121,26 @@ class PadAgent(AbstractAgent):
 
         if self.b2d:
             data_points = []
+            
+            all_pos = torch.cat([proposals.detach(), target_trajectory.detach()[:,None]],dim=1)[:, :,:, :2].reshape(len(target_traj),-1, 2)
 
-            for token, town_name, lidar2world, poses, target_poses in zip(targets["token"], targets["town_name"],
+            mid_points = (all_pos.amax(1) + all_pos.amin(1)) / 2
+
+            dists = torch.linalg.norm(all_pos - mid_points[:,None], dim=-1).amax(1) + 5
+
+            xyz = torch.cat(
+                [mid_points[..., :2], torch.zeros_like(mid_points[..., :1]), torch.ones_like(mid_points[..., :1])], dim=-1)
+
+            xys = torch.einsum("nij,nj->ni", targets["lidar2world"], xyz)[:, :2]
+
+            for token, town_name, lidar2world, poses, target_poses, dist, xy in zip(targets["token"], targets["town_name"],
                                                                  targets["lidar2world"].cpu().numpy(), trajectory,
-                                                                 target_traj):
+                                                                 target_traj,dists.cpu().numpy(), xys.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]
-
-                mid_points=target_poses[2:3]
-
-                xyz=np.concatenate([mid_points[...,:2],np.zeros_like(mid_points[...,:1]),np.ones_like(mid_points[...,:1])],axis=-1)
-                xy = np.einsum("ij,nj->ni", lidar2world, xyz)[0, :2]
 
                 dist_to_cur = np.linalg.norm(all_lane_points[:,:2] - xy, axis=-1)
 
-                nearby_point = all_lane_points[dist_to_cur < 25]
+                nearby_point = all_lane_points[dist_to_cur < dist]
 
                 data_dict = {
                     "token": metric_cache_paths[token],
@@ -309,7 +316,36 @@ class PadAgent(AbstractAgent):
         return self.pad_loss(targets, pred, self._config)
 
     def get_optimizers(self):
-        return torch.optim.AdamW(self._pad_model.parameters(), lr=self._lr,weight_decay=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self._lr)#,weight_decay= 1e-2
+        self.lr_warmup_steps=500
+        self.lr_total_steps=20000
+        self.lr_min_ratio=1e-3
+
+        def lr_lambda(current_step):
+            if current_step < self.lr_warmup_steps:
+                return (1.0 / 3) + (current_step / self.lr_warmup_steps) * (1 - 1.0 / 3)
+            return self.lr_min_ratio + 0.5 * (1 - self.lr_min_ratio) * (
+                1.0
+                + math.cos(
+                    math.pi
+                    * min(
+                        1.0,
+                        (current_step - self.lr_warmup_steps)
+                        / (self.lr_total_steps - self.lr_warmup_steps),
+                    )
+                )
+            )
+
+
+        scheduler = {
+            'scheduler': LambdaLR(optimizer, lr_lambda),
+            'interval': 'step',  # Update every step
+            'frequency': 1
+        }
+
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+
+        # return torch.optim.AdamW(self._pad_model.parameters(), lr=self._lr,weight_decay=1e-4)
 
     def get_training_callbacks(self):
 

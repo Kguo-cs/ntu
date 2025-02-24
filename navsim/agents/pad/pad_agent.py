@@ -40,7 +40,7 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=True
+            self.ray=False
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch

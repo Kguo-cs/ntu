@@ -82,26 +82,21 @@ def get_collision_type(
         state,
         ego_polygon: Polygon,
         tracked_object_polygon: Polygon,
-        track_object_vel,
+        track_speed,
+        track_heading,
         stopped_speed_threshold: float = 5e-02,
 ):
-    ego_speed = np.hypot(
-        state[-2],
-        state[-1],
-    )
+    ego_speed = state[-1]
 
     is_ego_stopped = float(ego_speed) <= stopped_speed_threshold
 
     center_point = tracked_object_polygon.centroid
 
-    # Calculate heading angle in degrees
-    track_heading = np.arctan2(track_object_vel[-1], track_object_vel[-2])
-
     tracked_object_center = StateSE2(center_point.x, center_point.y, track_heading)
 
     x=state[0]
     y=state[1]
-    ego_heading=np.arctan2(state[-1], state[-2])
+    ego_heading=state[2]
 
     ego_rear_axle_pose: StateSE2 = StateSE2(x,y,ego_heading)
 
@@ -110,7 +105,7 @@ def get_collision_type(
         collision_type = CollisionType.STOPPED_EGO_COLLISION
 
     # Collisions at (close-to) zero track speed
-    elif (np.hypot(track_object_vel[-2],track_object_vel[-1]) <= stopped_speed_threshold):
+    elif track_speed <= stopped_speed_threshold:
         collision_type = CollisionType.STOPPED_TRACK_COLLISION
 
     # Rear collision when both ego and track are not stopped
@@ -167,7 +162,15 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
     ego_pos=_ego_coords[:,:,0].mean(-2)
     ego_vel=(_ego_coords[:,:,1,0]-_ego_coords[:,:,0,0])*2
 
-    ego_state=np.concatenate([ego_pos,ego_vel],axis=-1)
+    speeds=np.linalg.norm(ego_vel,axis=-1)
+
+    # Compute the vector along the front edge
+    front_edge = _ego_coords[:,:, 0,0, :] - _ego_coords[:,:, 0, 1, :]
+
+    # Compute heading angle relative to x-axis
+    ego_headings = np.arctan2(front_edge[..., 1], front_edge[..., 0])
+
+    ego_state=np.concatenate([ego_pos,ego_headings[...,None],speeds[...,None]],axis=-1)
 
     fut_box_center=fut_box_corners.mean(-2)
 
@@ -175,7 +178,13 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
 
     track_object_vel=np.concatenate([track_object_vel[:,:1],track_object_vel],axis=1)
 
-    speeds=np.linalg.norm(ego_vel,axis=-1)
+    track_object_speeds=np.linalg.norm(track_object_vel,axis=-1)
+
+    # Compute the vector along the front edge
+    front_edge = fut_box_corners[..., 0, :] - fut_box_corners[..., 1, :]
+
+    # Compute heading angle relative to x-axis
+    track_object_headings = np.arctan2(front_edge[..., 1], front_edge[..., 0])
 
     for time_idx in range(n_future):
         geometries=fut_box_corners[:,time_idx][fut_mask[:,time_idx]]
@@ -204,7 +213,9 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
                 ego_state[proposal_idx][time_idx],
                 ego_polygons[proposal_idx],
                 tracked_object_polygon,
-                track_object_vel[token][time_idx]
+                track_object_speeds[token][time_idx],
+                track_object_headings[token][time_idx],
+
             )
             collisions_at_stopped_track_or_active_front: bool = collision_type in [
                 CollisionType.ACTIVE_FRONT_COLLISION,
@@ -245,7 +256,7 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
             tracked_object_polygon = _geometries[geometry_idx]
 
             centroid = tracked_object_polygon.centroid
-            track_heading =  np.arctan2(track_object_vel[token][time_idx][-1], track_object_vel[token][time_idx][-2])
+            track_heading = track_object_headings[token][time_idx]
             track_state = StateSE2(centroid.x, centroid.y, track_heading)
 
             # TODO: fix ego_area for intersection

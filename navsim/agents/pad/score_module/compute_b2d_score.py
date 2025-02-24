@@ -3,7 +3,20 @@ import torch
 from shapely.geometry import Polygon
 from shapely.creation import linestrings
 from shapely import Point, creation
-
+from shapely.strtree import STRtree
+import shapely
+from nuplan.planning.metrics.utils.collision_utils import CollisionType
+from nuplan.planning.simulation.observation.idm.utils import is_agent_behind, is_track_stopped
+from shapely import LineString, Polygon
+from nuplan.common.actor_state.state_representation import StateSE2
+from navsim.planning.simulation.planner.pdm_planner.utils.pdm_enums import (
+    BBCoordsIndex,
+    EgoAreaIndex,
+    MultiMetricIndex,
+    StateIndex,
+    WeightedMetricIndex,
+)
+from nuplan.planning.simulation.observation.idm.utils import is_agent_ahead, is_agent_behind
 
 def compute_corners(proposals):
 
@@ -48,8 +61,8 @@ def compute_corners_torch(proposals):
     sin_yaw=sin_yaw[...,None]
 
     # Compute the four corners
-    corners_x = torch.stack([half_length, half_length, -half_length, -half_length],dim=-1)
-    corners_y = torch.stack([half_width, -half_width, -half_width, half_width],dim=-1)
+    corners_x = torch.stack([half_length, -half_length, -half_length, half_length],dim=-1)
+    corners_y = torch.stack([-half_width, -half_width, half_width, half_width],dim=-1)
 
     # Rotate corners by yaw
     rot_corners_x = cos_yaw * corners_x + (-sin_yaw) * corners_y
@@ -59,116 +72,210 @@ def compute_corners_torch(proposals):
     corners = torch.stack((rot_corners_x + x[...,None], rot_corners_y + y[...,None]), dim=-1)
 
     return corners
+    # FRONT_LEFT = 0
+    # REAR_LEFT = 1
+    # REAR_RIGHT = 2
+    # FRONT_RIGHT = 3
 
-def eval_single(ego_corners,fut_corners,fut_mask):
 
-    agent_number=fut_corners.shape[0]
-    n_future=fut_corners.shape[1]
+def get_collision_type(
+        state,
+        ego_polygon: Polygon,
+        tracked_object_polygon: Polygon,
+        track_object_vel,
+        stopped_speed_threshold: float = 5e-02,
+):
+    ego_speed = np.hypot(
+        state[-2],
+        state[-1],
+    )
 
-    ttc_collsion=False
-    ttc_agent=np.zeros([6,4,2])
-    ttc_agent_mask=np.zeros([6])
+    is_ego_stopped = float(ego_speed) <= stopped_speed_threshold
 
-    for t in range(n_future):
-        ego_poly=Polygon([(point[0], point[1]) for point in ego_corners[t][0]])
+    center_point = tracked_object_polygon.centroid
 
-        if not ttc_collsion:
-            ego_poly1=Polygon([(point[0], point[1]) for point in ego_corners[t][1]])
+    # Calculate heading angle in degrees
+    track_heading = np.arctan2(track_object_vel[-1], track_object_vel[-2])
 
-            #ego_poly2=Polygon([(point[0], point[1]) for point in ego_corners[t][2]])
+    tracked_object_center = StateSE2(center_point.x, center_point.y, track_heading)
 
-        for n in range(agent_number):
-            if fut_mask[n][t]:
-                fut_corners_tn=fut_corners[n][t]
-                box_poly = Polygon([(point[0], point[1]) for point in fut_corners_tn])
-                collision = ego_poly.intersects(box_poly)
-                if collision:
-                    collision_agent=fut_corners[n][:t+1]
-                    collision_agent_mask=fut_mask[n][:t+1]
-                    return True,ttc_collsion,collision_agent,collision_agent_mask,ttc_agent,ttc_agent_mask
-                elif not ttc_collsion:
-                    ttc_collsion = ego_poly1.intersects(box_poly) #(ego_poly1.intersects(box_poly)) # |(ego_poly2.intersects(box_poly))
-                    if ttc_collsion:
-                        ttc_agent=fut_corners[n][:t+1]
-                        ttc_agent_mask=fut_mask[n][:t+1]
+    x=state[0]
+    y=state[1]
+    ego_heading=np.arctan2(state[-1], state[-2])
 
-    return False,ttc_collsion,np.zeros([6,4,2]), np.zeros([6]),ttc_agent,ttc_agent_mask
+    ego_rear_axle_pose: StateSE2 = StateSE2(x,y,ego_heading)
 
-def evaluate_coll( ttc_corners,fut_corners,fut_mask):
-    n_future = ttc_corners.shape[1]
-    #
-    # proposals1=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
-    #
-    # vel=proposals1[:,1:,:2]-proposals1[:,:-1,:2]
-    #
-    # proposals_05=np.concatenate([proposals[:,:,:2]+vel,proposals[:,:,2:]],axis=-1)
-    #
-    # #proposals_10=np.concatenate([proposals[:,:,:2]+vel*2, proposals[:,:,2:]],axis=-1)
-    #
-    # proposals=np.stack([proposals,proposals_05],axis=2)#,proposals_10
-    #
-    # ego_corners=compute_corners(proposals.reshape(-1,3)).reshape(-1,n_future,proposals.shape[2],4,2)
+    # Collisions at (close-to) zero ego speed
+    if is_ego_stopped:
+        collision_type = CollisionType.STOPPED_EGO_COLLISION
 
-    num_col=2
-    n_proposal = ttc_corners.shape[0]-1
+    # Collisions at (close-to) zero track speed
+    elif (np.hypot(track_object_vel[-2],track_object_vel[-1]) <= stopped_speed_threshold):
+        collision_type = CollisionType.STOPPED_TRACK_COLLISION
 
-    key_agent_corners = np.zeros([n_proposal,num_col, 6, 4, 2])
-    key_agent_labels = np.zeros([n_proposal,num_col, 6],dtype=bool)
-    collision_all = np.zeros([n_proposal,n_future])
-    ttc_collision_all = np.zeros([n_proposal,n_future])
+    # Rear collision when both ego and track are not stopped
+    elif is_agent_behind(ego_rear_axle_pose, tracked_object_center):
+        collision_type = CollisionType.ACTIVE_REAR_COLLISION
 
-    for i in range(n_proposal):
-        collision_all_i,ttc_collision_i,collision_agent_i,collision_agent_mask_i,ttc_agent_i,ttc_agent_mask_i=eval_single(ttc_corners[i],fut_corners,fut_mask)
-        collision_all[i]=collision_all_i
-        ttc_collision_all[i]=ttc_collision_i
-        key_agent_corners[i,0,:len(collision_agent_i)]=collision_agent_i
-        key_agent_labels[i,0,:len(collision_agent_mask_i)]=collision_agent_mask_i
-        key_agent_corners[i,1,:len(ttc_agent_i)]=ttc_agent_i
-        key_agent_labels[i,1,:len(ttc_agent_mask_i)]=ttc_agent_mask_i
+    # Front bumper collision when both ego and track are not stopped
+    elif LineString(
+            [
+                ego_polygon.exterior.coords[0],
+                ego_polygon.exterior.coords[3],
+            ]
+    ).intersects(tracked_object_polygon):
+        collision_type = CollisionType.ACTIVE_FRONT_COLLISION
 
-    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels,ttc_corners[:,:,0]
+    # Lateral collision when both ego and track are not stopped
+    else:
+        collision_type = CollisionType.ACTIVE_LATERAL_COLLISION
+
+    return collision_type
+
+
+def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
+    n_future = _ego_coords.shape[1]
+    _num_proposals=_ego_coords.shape[0]
+    fut_mask=fut_box_corners.all(-1).all(-1)
+
+    node_capacity=10
+
+    _ego_polygons = shapely.creation.polygons(_ego_coords)
+
+    proposal_fault_collided_track_ids = {
+        proposal_idx:[]
+        for proposal_idx in range(_num_proposals)
+    }
+    proposal_collided_track_ids = {
+        proposal_idx:[]
+        for proposal_idx in range(_num_proposals)
+    }
+    temp_collided_track_ids = {
+        proposal_idx:[]
+        for proposal_idx in range(_num_proposals)
+    }
+    ttc_collided_track_ids = {
+        proposal_idx:[]
+        for proposal_idx in range(_num_proposals)
+    }
+
+    key_agent_corners = np.zeros([_num_proposals,2, 6, 4, 2])
+    key_agent_labels = np.zeros([_num_proposals,2, 6],dtype=bool)
+    collision_all = np.zeros([_num_proposals,n_future])
+    ttc_collision_all = np.zeros([_num_proposals,n_future])
+
+    ego_pos=_ego_coords[:,:,0].mean(-2)
+    ego_vel=(_ego_coords[:,:,1,0]-_ego_coords[:,:,0,0])*2
+
+    ego_state=np.concatenate([ego_pos,ego_vel],axis=-1)
+
+    fut_box_center=fut_box_corners.mean(-2)
+
+    track_object_vel = (fut_box_center[:,1:]-fut_box_center[:,:-1])*2
+
+    track_object_vel=np.concatenate([track_object_vel[:,:1],track_object_vel],axis=1)
+
+    speeds=np.linalg.norm(ego_vel,axis=-1)
+
+    for time_idx in range(n_future):
+        geometries=fut_box_corners[:,time_idx][fut_mask[:,time_idx]]
+        _geometries = [Polygon(geometry) for geometry in geometries]
+        _str_tree = STRtree(_geometries, node_capacity)
+        ego_polygons = _ego_polygons[:, time_idx,0]
+
+        intersecting = _str_tree.query(ego_polygons, predicate="intersects")
+
+        token_list=np.arange(len(fut_box_corners))[fut_mask[:,time_idx]]
+
+        for proposal_idx, geometry_idx in zip(intersecting[0], intersecting[1]):
+            token=token_list[geometry_idx]
+            if token in proposal_collided_track_ids[proposal_idx] or len(proposal_fault_collided_track_ids[proposal_idx]):
+                continue
+
+            ego_in_multiple_lanes_or_nondrivable_area = (
+                    _ego_areas[proposal_idx, time_idx, EgoAreaIndex.MULTIPLE_LANES]
+                    or _ego_areas[proposal_idx, time_idx, EgoAreaIndex.NON_DRIVABLE_AREA]
+            )
+
+            tracked_object_polygon = _geometries[geometry_idx]
+
+            # classify collision
+            collision_type: CollisionType = get_collision_type(
+                ego_state[proposal_idx][time_idx],
+                ego_polygons[proposal_idx],
+                tracked_object_polygon,
+                track_object_vel[token][time_idx]
+            )
+            collisions_at_stopped_track_or_active_front: bool = collision_type in [
+                CollisionType.ACTIVE_FRONT_COLLISION,
+                CollisionType.STOPPED_TRACK_COLLISION,
+            ]
+            collision_at_lateral: bool = collision_type == CollisionType.ACTIVE_LATERAL_COLLISION
+
+            # 1. at fault collision
+            if collisions_at_stopped_track_or_active_front or (
+                    ego_in_multiple_lanes_or_nondrivable_area and collision_at_lateral
+            ):
+                proposal_fault_collided_track_ids[proposal_idx].append(token)
+                collision_all[proposal_idx][time_idx]=True
+                key_agent_labels[proposal_idx][0][:time_idx+1]=fut_mask[token][:time_idx+1]
+                key_agent_corners[proposal_idx][0][:time_idx+1]=fut_box_corners[token][:time_idx+1]
+            else:  # 2. no at fault collision
+                proposal_collided_track_ids[proposal_idx].append(token)
+
+        ego_polygons = _ego_polygons[:, time_idx,1]
+
+        intersecting = _str_tree.query(ego_polygons, predicate="intersects")
+
+        for proposal_idx, geometry_idx in zip(intersecting[0], intersecting[1]):
+            token = token_list[geometry_idx]
+            if (token in temp_collided_track_ids[proposal_idx]  or (speeds[proposal_idx, time_idx] < 5e-02) or len(ttc_collided_track_ids[proposal_idx])
+            ):
+                continue
+
+            ego_in_multiple_lanes_or_nondrivable_area = (
+                    _ego_areas[proposal_idx, time_idx, EgoAreaIndex.MULTIPLE_LANES]
+                    or _ego_areas[proposal_idx, time_idx, EgoAreaIndex.NON_DRIVABLE_AREA]
+            )
+
+            state=ego_state[proposal_idx][time_idx]
+            ego_heading = np.arctan2(state[-1], state[-2])
+
+            ego_rear_axle: StateSE2 = StateSE2(state[0], state[1], ego_heading)
+            tracked_object_polygon = _geometries[geometry_idx]
+
+            centroid = tracked_object_polygon.centroid
+            track_heading =  np.arctan2(track_object_vel[token][time_idx][-1], track_object_vel[token][time_idx][-2])
+            track_state = StateSE2(centroid.x, centroid.y, track_heading)
+
+            # TODO: fix ego_area for intersection
+            if is_agent_ahead(ego_rear_axle, track_state) or (
+                    ego_in_multiple_lanes_or_nondrivable_area
+                    and not is_agent_behind(ego_rear_axle, track_state)
+            ):
+                ttc_collided_track_ids[proposal_idx].append(token)
+                ttc_collision_all[proposal_idx][time_idx]=True
+                key_agent_labels[proposal_idx][1][:time_idx+1]=fut_mask[token][:time_idx+1]
+                key_agent_corners[proposal_idx][1][:time_idx+1]=fut_box_corners[token][:time_idx+1]
+            else:
+                temp_collided_track_ids[proposal_idx].append(token)
+
+    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels
 
 def get_scores(args):
 
-    return [get_sub_score(a["fut_box_corners"],a["min_index"],a["comfort"],a["on_road_all"],a["on_route_all"],a["ttc_corners"]) for a in args]
+    return [get_sub_score(a["fut_box_corners"],a["_ego_coords"],a["min_index"],a["comfort"],a["ego_areas"]) for a in args]
 
-def get_sub_score(fut_box_corners,min_index,comfort,on_road_all,on_route_all,ttc_corner):
+def get_sub_score(fut_box_corners,_ego_coords,min_index,comfort,ego_areas):
 
-    fut_mask=fut_box_corners.all(-1).all(-1)
-
-    #all_proposals=np.concatenate([proposals,target_trajectory[None]],axis=0)
-
-    collsions,ttc_collision,key_agent_corners,key_agent_labels,ego_corners=evaluate_coll(ttc_corner,fut_box_corners,fut_mask)
+    collsions,ttc_collision,key_agent_corners,key_agent_labels=evaluate_coll(fut_box_corners,_ego_coords,ego_areas)
 
     collision=1-collsions.any(-1)
 
     ttc=1-ttc_collision.any(-1)
 
-    # ego_corners=np.concatenate([ego_corners, all_proposals[:,:,None,:2]],axis=-2)
-    #
-    # ego_corners_xyz=np.concatenate([ego_corners,np.zeros_like(ego_corners[...,:1]),np.ones_like(ego_corners[...,:1])],axis=-1)
-    #
-    # global_conners =np.einsum("ij,ntkj->ntki",lidar2world,ego_corners_xyz)[...,:2]
-
-    # center_xy=nearby_point[:,:2]
-    # center_width=nearby_point[:,2]
-    # center_laneid=nearby_point[:,-1]
-    #
-    # dist_to_center = np.linalg.norm(global_conners[None] - center_xy[:, None, None,None], axis=-1)
-    #
-    # on_road=dist_to_center[:,:-1]<center_width[:,None,None,None]
-    #
-    # on_road_all=on_road.any(0).all(-1)
-    #
-    # center_nearest_road=np.argmin(dist_to_center[:,:,:,-1]-center_width[:,None,None],axis=0)
-    #
-    # nearest_road_id=np.round(center_laneid[center_nearest_road])
-    #
-    # target_road_id=np.unique(nearest_road_id[-1])
-    #
-    # proposal_center_road_id=nearest_road_id[:-1]
-    #
-    # on_route_all=np.isin(proposal_center_road_id, target_road_id)
+    on_road_all=ego_areas[:,:,1]
+    on_route_all=ego_areas[:,:,2]
 
     drivable_area_compliance=on_road_all.all(-1) & on_route_all.all(-1)
 

@@ -61,6 +61,7 @@ class PadAgent(AbstractAgent):
                 with open(map_file, 'rb') as f:
                     self.map_infos = pickle.load(f)
                 self.cuda_map=False
+
             else:
                 from .score_module.compute_navsim_score import get_scores
 
@@ -175,40 +176,51 @@ class PadAgent(AbstractAgent):
                     self.map_infos[key] = torch.tensor(value).to(target_trajectory.device)
                 self.cuda_map=True
 
-            for token, town_name, min_index, comfort, dist, xy,global_conners,ttc_corners in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
+            for token, town_name, min_index, comfort, dist, xy,global_conners,_ego_coords in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]
 
                 dist_to_cur = torch.linalg.norm(all_lane_points[:,:2] - xy, dim=-1)
 
                 nearby_point = all_lane_points[dist_to_cur < dist]
 
-                center_xy = nearby_point[:, :2]
-                center_width = nearby_point[:, 2]
-                center_laneid = nearby_point[:, -1]
+                lane_xy = nearby_point[:, :2]
+                lane_width = nearby_point[:, 2]
+                lane_id = nearby_point[:, -1]
 
-                dist_to_center = torch.linalg.norm(global_conners[None] - center_xy[:, None, None, None], dim=-1)
+                dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
 
-                on_road = dist_to_center[:, :-1] < center_width[:, None, None, None]
+                on_road = dist_to_lane[:, :-1] < lane_width[:, None, None, None]
 
                 on_road_all = on_road.any(0).all(-1)
 
-                center_nearest_road = torch.argmin(dist_to_center[:, :, :, -1] - center_width[:, None, None], dim=0)
+                nearest_lane = torch.argmin(dist_to_lane - lane_width[:, None, None,None], dim=0)
 
-                nearest_road_id = torch.round(center_laneid[center_nearest_road])
+                nearest_lane_id=lane_id[nearest_lane]
+
+                center_nearest_lane_id=nearest_lane_id[:,:,-1]
+
+                nearest_road_id = torch.round(center_nearest_lane_id)
 
                 target_road_id = torch.unique(nearest_road_id[-1])
 
                 proposal_center_road_id = nearest_road_id[:-1]
 
                 on_route_all = torch.isin(proposal_center_road_id, target_road_id)
+                # in_multiple_lanes: if
+                # - more than one drivable polygon contains at least one corner
+                # - no polygon contains all corners
+                corner_nearest_lane_id=nearest_lane_id[:-1,:,:-1]
+
+                batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
+
+                ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
 
                 data_dict = {
                     "fut_box_corners": metric_cache_paths[token],
+                    "_ego_coords": _ego_coords[:-1],
                     "min_index": min_index,
                     "comfort": comfort,
-                    "on_road_all": on_road_all.cpu().numpy(),
-                    "on_route_all": on_route_all.cpu().numpy(),
-                    "ttc_corners":ttc_corners
+                    "ego_areas": ego_areas.cpu().numpy(),
                 }
                 data_points.append(data_dict)
         else:

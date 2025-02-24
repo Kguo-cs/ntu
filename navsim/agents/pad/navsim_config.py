@@ -38,6 +38,7 @@ class PadConfig:
     half_length: float= 2.588+0.15
     half_width: float =1.1485+0.1
     rear_axle_to_center: float = 1.461
+    lidar_height: float = 0
 
     num_poses: int=8
     num_agent_pose: int=41

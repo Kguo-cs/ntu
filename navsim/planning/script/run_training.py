@@ -131,8 +131,6 @@ def main(cfg: DictConfig) -> None:
 
     logger.info("Building Trainer")
     trainer = pl.Trainer(**cfg.trainer.params, callbacks=agent.get_training_callbacks())
-    trainer.checkpoint_callback.dir_path=trainer.default_root_dir
-    trainer.checkpoint_callbacks[0].dir_path=trainer.default_root_dir
 
     logger.info("Starting Training")
     trainer.fit(

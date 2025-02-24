@@ -17,19 +17,19 @@ split: trainval
 cache_path: ${oc.env:NAVSIM_EXP_ROOT}/B2d_cache
 use_cache_without_dataset: true # load the training samples from the cache. scene-filter will be ignored
 force_cache_computation: false
-experiment_name: B2d64_allw1_cos1e3_decay0_warm500_alld_gradclip35 
+experiment_name: B2d64_allw1_cos1e3_decay0_warm500_alld_gradclip35_at_fault
 seed: 0
 
 dataloader:
   params:
-    batch_size: 64 #nu2mber of samples per batch
+    batch_size: 1 #nu2mber of samples per batch
     num_workers: 16  # number of workers for data loading
     pin_memory: true  # pin memory for faster GPU transfer
     prefetch_factor: 4  # number of samples loaded in advance by each worker
 
 trainer:
   params:
-    max_epochs: 25  # maximum number of training epochs
+    max_epochs: 30  # maximum number of training epochs
     check_val_every_n_epoch: 1  # run validation set every n training epochs
     val_check_interval: 1.0  # [%] run validation set every X% of training set
 

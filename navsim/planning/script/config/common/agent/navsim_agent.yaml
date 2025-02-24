@@ -13,5 +13,5 @@ config:
 
   latent: False
 
-checkpoint_path: '/home/ke/PAD/exp/navsimepoch=25-step=8632.ckpt'
+checkpoint_path: ''
 lr: 1e-4

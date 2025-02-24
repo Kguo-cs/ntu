@@ -17,7 +17,7 @@ split: trainval
 cache_path: ${oc.env:NAVSIM_EXP_ROOT}/B2d_cache
 use_cache_without_dataset: true # load the training samples from the cache. scene-filter will be ignored
 force_cache_computation: false
-experiment_name: B2d64_allw1_cos1e3_decay0_warm500_alld #_gradclip35 
+experiment_name: B2d64_allw1_cos1e3_decay0_warm500_alld_gradclip35 
 seed: 0
 
 dataloader:
@@ -46,6 +46,6 @@ trainer:
 
     accumulate_grad_batches: 1  # accumulates gradients every n batches
     # track_grad_norm: -1  # logs the p-norm for inspection
-    gradient_clip_val: 0.0  # value to clip gradients
+    gradient_clip_val: 35.0  # value to clip gradients
     gradient_clip_algorithm: norm  # [value, norm] method to clip gradients
     default_root_dir: ${output_dir}

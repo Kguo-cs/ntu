@@ -60,9 +60,7 @@ class PadAgent(AbstractAgent):
 
                 with open(map_file, 'rb') as f:
                     self.map_infos = pickle.load(f)
-
-                for key,value in self.map_infos.items():
-                    self.map_infos[key]=torch.tensor(value).cuda()
+                self.cuda_map=False
             else:
                 from .score_module.compute_navsim_score import get_scores
 
@@ -129,7 +127,7 @@ class PadAgent(AbstractAgent):
 
             lidar2worlds=targets["lidar2world"]
 
-            all_proposals = torch.cat([proposals, target_trajectory[None]], dim=1)
+            all_proposals = torch.cat([proposals, target_trajectory[:,None]], dim=1)
 
             all_proposals_xy=all_proposals[:, :,:, :2]
             all_proposals_heading=all_proposals[:, :,:, 2:]
@@ -162,7 +160,7 @@ class PadAgent(AbstractAgent):
 
             global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[..., :2]
 
-            l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[None, ..., :2], dim=-1).mean(-1)
+            l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:,None, ..., :2], dim=-1).mean(-1)
 
             min_indexs = torch.argmin(l2, dim=1)
 
@@ -171,6 +169,11 @@ class PadAgent(AbstractAgent):
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
 
             comforts = (accs < 10).all(-1)
+            
+            if self.cuda_map==False:
+                for key, value in self.map_infos.items():
+                    self.map_infos[key] = torch.tensor(value).to(target_trajectory.device)
+                self.cuda_map=True
 
             for token, town_name, min_index, comfort, dist, xy,global_conners,ttc_corners in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]

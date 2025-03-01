@@ -217,7 +217,7 @@ class LeaderboardEvaluator(object):
 
         time.sleep(10*task_id)
         attempts = 0
-        num_max_restarts = 20
+        num_max_restarts = 200
         while attempts < num_max_restarts:
             try:
                 args.port = find_free_port(args.port)

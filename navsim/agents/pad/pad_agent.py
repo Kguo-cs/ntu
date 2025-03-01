@@ -40,7 +40,7 @@ class PadAgent(AbstractAgent):
             self.bce_logit_loss = nn.BCEWithLogitsLoss()
             self.b2d = config.b2d
 
-            self.ray=False
+            self.ray=True
 
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
@@ -389,36 +389,37 @@ class PadAgent(AbstractAgent):
         return self.pad_loss(targets, pred, self._config)
 
     def get_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self._lr)#,weight_decay= 1e-2
-        self.lr_warmup_steps=500
-        self.lr_total_steps=20000
-        self.lr_min_ratio=1e-3
+        # optimizer = torch.optim.Adam(self.parameters(), lr=self._lr)#,weight_decay= 1e-2
+        # self.lr_warmup_steps=500
+        # self.lr_total_steps=20000
+        # self.lr_min_ratio=1e-3
 
-        def lr_lambda(current_step):
-            if current_step < self.lr_warmup_steps:
-                return (1.0 / 3) + (current_step / self.lr_warmup_steps) * (1 - 1.0 / 3)
-            return self.lr_min_ratio + 0.5 * (1 - self.lr_min_ratio) * (
-                1.0
-                + math.cos(
-                    math.pi
-                    * min(
-                        1.0,
-                        (current_step - self.lr_warmup_steps)
-                        / (self.lr_total_steps - self.lr_warmup_steps),
-                    )
-                )
-            )
+        # def lr_lambda(current_step):
+        #     if current_step < self.lr_warmup_steps:
+        #         return (1.0 / 3) + (current_step / self.lr_warmup_steps) * (1 - 1.0 / 3)
+        #     return 1.0
+        #     # return self.lr_min_ratio + 0.5 * (1 - self.lr_min_ratio) * (
+        #     #     1.0
+        #     #     + math.cos(
+        #     #         math.pi
+        #     #         * min(
+        #     #             1.0,
+        #     #             (current_step - self.lr_warmup_steps)
+        #     #             / (self.lr_total_steps - self.lr_warmup_steps),
+        #     #         )
+        #     #     )
+        #     # )
 
 
-        scheduler = {
-            'scheduler': LambdaLR(optimizer, lr_lambda),
-            'interval': 'step',  # Update every step
-            'frequency': 1
-        }
+        # scheduler = {
+        #     'scheduler': LambdaLR(optimizer, lr_lambda),
+        #     'interval': 'step',  # Update every step
+        #     'frequency': 1
+        # }
 
-        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+        # return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
-        # return torch.optim.AdamW(self._pad_model.parameters(), lr=self._lr,weight_decay=1e-4)
+        return torch.optim.Adam(self._pad_model.parameters(), lr=self._lr)#,weight_decay=1e-4
 
     def get_training_callbacks(self):
 

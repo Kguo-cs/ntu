@@ -44,7 +44,7 @@ class PadConfig:
     tf_dropout: float = 0.1
 
     # loss weights
-    trajectory_weight: float = 1.0
+    trajectory_weight: float = 1
     inter_weight: float = 0.1
     sub_score_weight: int = 1
     final_score_weight: int = 1

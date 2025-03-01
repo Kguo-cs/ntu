@@ -45,7 +45,7 @@ os.environ["SCENARIO_RUNNER_ROOT"] = "scenario_runner"
 os.environ["LEADERBOARD_ROOT"] = "leaderboard"
 #95 3800
 TEAM_AGENT=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_b2d_agent.py"
-TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000/02.11_10.50/lightning_logs/version_0/checkpoints/epoch=6-step=5376.ckpt"
+TEAM_CONFIG=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/epoch=19-step=15360.ckpt"
 
 if not os.path.exists("./eval_pad/"):
     os.mkdir("./eval_pad/")

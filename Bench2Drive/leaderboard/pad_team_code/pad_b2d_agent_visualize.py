@@ -365,36 +365,28 @@ class padAgent(autonomous_agent.AutonomousAgent):
 
         return result
 
-    def process_input(self,input_data_batch,speed,ego_accel,local_command_xy):
-        # input_data_batch["ego_status"]=torch.cat([torch.zeros_like(ego_fut_cmd[...,:4]),ego_fut_cmd,torch.zeros_like(ego_fut_cmd[...,:1])],dim=-1)
-        # ego_fut_cmd=input_data_batch['ego_fut_cmd'][0]
-        #
-        #camera_feature=
-        img_metas=input_data_batch["img_metas"][0][0]
+    def process_input(self, input_data_batch, speed, ego_accel, local_command_xy):
+        img_metas = input_data_batch["img_metas"][0][0]
 
-        gt_ego_fut_cmd=input_data_batch['ego_fut_cmd'][0][0][0][0]
-        #acc = np.linalg.norm(ego_accel[ :2])  # np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
+        gt_ego_fut_cmd = input_data_batch['ego_fut_cmd'][0][0][0][0]
+        acc = ego_accel[
+              :2]  # np.linalg.norm(ego_accel[ :2])  # np.array([ann_info['acceleration'][0],-ann_info['acceleration'][1],ann_info['acceleration'][2]])
 
-        device=gt_ego_fut_cmd.device
+        device = gt_ego_fut_cmd.device
 
-        # if speed<3:
-        #     speed=0
-
-        # if self.desire_speed is not None:
-        #     speed=self.desire_speed
-
-        features={}
+        features = {}
         features["ego_status"] = torch.cat(
-            [torch.tensor(np.array([speed])).to(device), torch.zeros([1]).to(device), torch.tensor(local_command_xy).to(device), gt_ego_fut_cmd, torch.zeros([1]).to(device)])[None,None].to(torch.float32)
+            [torch.tensor(np.array([speed])).to(device), torch.tensor(acc).to(device),
+             torch.tensor(local_command_xy).to(device), gt_ego_fut_cmd])[None, None].to(torch.float32)
 
-        img=input_data_batch["img"][0]
-        features["camera_feature"] = img[:,:4]
+        img = input_data_batch["img"][0]
+        features["camera_feature"] = img[:, :4]
 
-        image_shape = torch.zeros([1,1, 2])
-        image_shape[:,:, 0] = img.shape[-2]
-        image_shape[:,:, 1] = img.shape[-1]
+        image_shape = torch.zeros([1, 1, 2])
+        image_shape[:, :, 0] = img.shape[-2]
+        image_shape[:, :, 1] = img.shape[-1]
 
-        features[ "img_shape"] = image_shape
+        features["img_shape"] = image_shape
 
         features["lidar2img"] = torch.tensor(np.array(img_metas['lidar2img'])[:4])[None].to(device)
 
@@ -495,18 +487,10 @@ class padAgent(autonomous_agent.AutonomousAgent):
         steer_traj, throttle_traj, brake_traj, metadata_traj = self.pidcontroller.control_pid(out_truck,
                                                                                               tick_data['speed'],
                                                                                               local_command_xy)
-        
-        # self.desire_speed=metadata_traj["desired_speed"]
-        #print(tick_data['speed'],metadata_traj["desired_speed"],throttle_traj,brake_traj)  
-        # steer_traj, throttle_traj, brake_traj, metadata_traj = self.lqrcontroller.control_lqr(out_traj,
-        #                                                                                     tick_data['speed'],
-        #                                                                                     tick_data['acceleration'])
 
-        
-        # if brake_traj < 0.05: brake_traj = 0.0
-        # if throttle_traj > brake_traj: brake_traj = 0.0
+        if brake_traj < 0.05: brake_traj = 0.0
+        if throttle_traj > brake_traj: brake_traj = 0.0
         #print(time.time()-t1)
-        #print(tick_data['speed'],tick_data['acceleration'])
 
         control = carla.VehicleControl()
         self.pid_metadata = metadata_traj

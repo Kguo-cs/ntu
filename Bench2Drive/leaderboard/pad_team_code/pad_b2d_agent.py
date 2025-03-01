@@ -29,6 +29,7 @@ import time
 
 SAVE_PATH = os.environ.get('SAVE_PATH', None)
 IS_BENCH2DRIVE = os.environ.get('IS_BENCH2DRIVE', None)
+VIS = os.environ.get('VIS', False)
 
 
 def get_entry_point():
@@ -101,6 +102,14 @@ class padAgent(autonomous_agent.AutonomousAgent):
             self.save_path = pathlib.Path(os.environ['SAVE_PATH']) / string
             self.save_path.mkdir(parents=True, exist_ok=False)
             (self.save_path / 'meta').mkdir()
+            if VIS:
+                (self.save_path / 'rgb_front').mkdir()
+                (self.save_path / 'rgb_front_right').mkdir()
+                (self.save_path / 'rgb_front_left').mkdir()
+                (self.save_path / 'rgb_back').mkdir()
+                (self.save_path / 'bev1').mkdir()
+                (self.save_path / 'bev2').mkdir()
+                (self.save_path / 'bev').mkdir()
 
         self.lidar2img = {
             'CAM_FRONT': np.array([[1.14251841e+03, 8.00000000e+02, 0.00000000e+00, -9.52000000e+02],
@@ -161,14 +170,17 @@ class padAgent(autonomous_agent.AutonomousAgent):
                                    [0., 0., 1., 1.84],
                                    [0., 0., 0., 1.]])
 
-        topdown_extrinsics = np.array(
-            [[0.0, -0.0, -1.0, 50.0], [0.0, 1.0, -0.0, 0.0], [1.0, -0.0, 0.0, -0.0], [0.0, 0.0, 0.0, 1.0]])
-        unreal2cam = np.array([[0, 1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1]])
-        self.coor2topdown = unreal2cam @ topdown_extrinsics
+        # topdown_extrinsics = np.array(
+        #     [[0.0, -0.0, -1.0, 50.0], [0.0, 1.0, -0.0, 0.0], [1.0, -0.0, 0.0, -0.0], [0.0, 0.0, 0.0, 1.0]])
+        # unreal2cam = np.array([[0, 1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1]])
+        # self.coor2topdown = unreal2cam @ topdown_extrinsics
+        self.coor2topdown = np.array([[1.0,  0.0,  0.0,  0.0],
+                                      [0.0, -1.0,  0.0,  0.0],
+                                      [0.0,  0.0, -1.0, 50.0],
+                                      [0.0,  0.0,  0.0,  1.0]])
         topdown_intrinsics = np.array(
             [[548.993771650447, 0.0, 256.0, 0], [0.0, 548.993771650447, 256.0, 0], [0.0, 0.0, 1.0, 0], [0, 0, 0, 1.0]])
         self.coor2topdown = topdown_intrinsics @ self.coor2topdown
-
 
         self.scale=cfg.scale
 
@@ -274,15 +286,15 @@ class padAgent(autonomous_agent.AutonomousAgent):
                 'id': 'SPEED'
             },
         ]
-        # if IS_BENCH2DRIVE:
-        #     sensors += [
-        #         {
-        #             'type': 'sensor.camera.rgb',
-        #             'x': 0.0, 'y': 0.0, 'z': 50.0,
-        #             'roll': 0.0, 'pitch': -90.0, 'yaw': 0.0,
-        #             'width': 512, 'height': 512, 'fov': 5 * 10.0,
-        #             'id': 'bev'
-        #         }]
+        if IS_BENCH2DRIVE and VIS:
+            sensors += [
+                {
+                    'type': 'sensor.camera.rgb',
+                    'x': 0.0, 'y': 0.0, 'z': 50.0,
+                    'roll': 0.0, 'pitch': -90.0, 'yaw': 0.0,
+                    'width': 512, 'height': 512, 'fov': 5 * 10.0,
+                    'id': 'bev'
+                }]
         return sensors
 
     def tick(self, input_data):
@@ -294,7 +306,10 @@ class padAgent(autonomous_agent.AutonomousAgent):
             _, img = cv2.imencode('.jpg', img, encode_param)
             img = cv2.imdecode(img, cv2.IMREAD_COLOR)
             imgs[cam] = img
-        bev = None #cv2.cvtColor(input_data['bev'][1][:, :, :3], cv2.COLOR_BGR2RGB)
+        if VIS:
+            bev=cv2.cvtColor(input_data['bev'][1][:, :, :3], cv2.COLOR_BGR2RGB)
+        else:
+            bev = None
         gps = input_data['GPS'][1][:2]
         speed = input_data['SPEED'][1]['speed']
         compass = input_data['IMU'][1][-1]
@@ -325,10 +340,6 @@ class padAgent(autonomous_agent.AutonomousAgent):
         return result
 
     def process_input(self,input_data_batch,speed,ego_accel,local_command_xy):
-        # input_data_batch["ego_status"]=torch.cat([torch.zeros_like(ego_fut_cmd[...,:4]),ego_fut_cmd,torch.zeros_like(ego_fut_cmd[...,:1])],dim=-1)
-        # ego_fut_cmd=input_data_batch['ego_fut_cmd'][0]
-        #
-        #camera_feature=
         img_metas=input_data_batch["img_metas"][0][0]
 
         gt_ego_fut_cmd=input_data_batch['ego_fut_cmd'][0][0][0][0]
@@ -448,10 +459,6 @@ class padAgent(autonomous_agent.AutonomousAgent):
         steer_traj, throttle_traj, brake_traj, metadata_traj = self.pidcontroller.control_pid(out_truck,
                                                                                                 tick_data['speed'],
                                                                                                 local_command_xy)
-        
-        # steer_traj, throttle_traj, brake_traj, metadata_traj = self.lqrcontroller.control_lqr(out_truck,
-        #                                                                                     tick_data['speed'],
-        #                                                                                     tick_data['acceleration'])
 
         if brake_traj < 0.05: brake_traj = 0.0
         if throttle_traj > brake_traj: brake_traj = 0.0
@@ -476,7 +483,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
         metric_info = self.get_metric_info()
         self.metric_info[self.step] = metric_info
         if SAVE_PATH is not None and self.step % 1 == 0:
-            self.save(tick_data)
+            self.save(tick_data,out_truck,output_data_batch)
         self.prev_control = control
 
         if len(self.prev_control_cache) == 10:
@@ -485,7 +492,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
         
         return control
 
-    def save(self, tick_data):
+    def save(self, tick_data,ego_traj,result=None):
         frame = self.step // 10
 
         #Image.fromarray(tick_data['imgs']['CAM_FRONT']).save(self.save_path / 'rgb_front' / ('%04d.png' % frame))

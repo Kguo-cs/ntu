@@ -18,34 +18,6 @@ from navsim.planning.simulation.planner.pdm_planner.utils.pdm_enums import (
 )
 from nuplan.planning.simulation.observation.idm.utils import is_agent_ahead, is_agent_behind
 
-def compute_corners(proposals):
-
-    headings= proposals[...,2]
-    cos_yaw = np.cos(headings)
-    sin_yaw = np.sin(headings)
-
-    x = proposals[..., 0] + 0.39 * cos_yaw
-    y = proposals[..., 1] + 0.39 * sin_yaw
-    half_width = 0.925 + np.zeros_like(headings)
-    half_length = 2.042 + np.zeros_like(headings)
-
-    cos_yaw = cos_yaw[..., None]
-    sin_yaw = sin_yaw[..., None]
-
-    # Compute the four corners
-    corners_x = np.stack([half_length, half_length, -half_length, -half_length],axis=-1)
-    corners_y = np.stack([half_width, -half_width, -half_width, half_width],axis=-1)
-
-    # Rotate corners by yaw
-    rot_corners_x = cos_yaw * corners_x + (-sin_yaw) * corners_y
-    rot_corners_y = sin_yaw * corners_x + cos_yaw * corners_y
-
-    # Translate corners to the center of the bounding box
-    corners = np.stack((rot_corners_x + x[...,None], rot_corners_y + y[...,None]), axis=-1)
-
-    return corners
-
-
 def compute_corners_torch(proposals):
 
     headings= proposals[...,2]
@@ -54,15 +26,15 @@ def compute_corners_torch(proposals):
 
     x = proposals[...,0]+0.39*cos_yaw
     y = proposals[...,1]+0.39*sin_yaw
-    half_width = 0.925+torch.zeros_like(headings)
     half_length=  2.042+torch.zeros_like(headings)
+    half_width = 0.925+torch.zeros_like(headings)
 
     cos_yaw=cos_yaw[...,None]
     sin_yaw=sin_yaw[...,None]
 
     # Compute the four corners
     corners_x = torch.stack([half_length, -half_length, -half_length, half_length],dim=-1)
-    corners_y = torch.stack([-half_width, -half_width, half_width, half_width],dim=-1)
+    corners_y = torch.stack([half_width, half_width, -half_width, -half_width],dim=-1)
 
     # Rotate corners by yaw
     rot_corners_x = cos_yaw * corners_x + (-sin_yaw) * corners_y

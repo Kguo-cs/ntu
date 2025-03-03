@@ -3,7 +3,6 @@ import torch
 import os
 import sys
 
-
 from bench2driveMMCV.datasets.B2D_vad_dataset import B2D_VAD_Dataset
 
 from pad_config import train_pipeline,test_pipeline,modality,class_names,NameMapping,eval_cfg,point_cloud_range
@@ -31,8 +30,8 @@ def compute_corners(boxes):
     sin_yaw = np.sin(headings)[...,None]
 
     # Compute the four corners
-    corners_x = np.stack([half_length, half_length, -half_length, -half_length],axis=-1)
-    corners_y = np.stack([half_width, -half_width, -half_width, half_width],axis=-1)
+    corners_x = np.stack([half_length, -half_length, -half_length, half_length],axis=-1)
+    corners_y = np.stack([half_width, half_width, -half_width, -half_width],axis=-1)
 
     # Rotate corners by yaw
     rot_corners_x = cos_yaw * corners_x + (-sin_yaw) * corners_y
@@ -40,7 +39,10 @@ def compute_corners(boxes):
 
     # Translate corners to the center of the bounding box
     corners = np.stack((rot_corners_x + x[...,None], rot_corners_y + y[...,None]), axis=-1)
-
+    # FRONT_LEFT = 0
+    # REAR_LEFT = 1
+    # REAR_RIGHT = 2
+    # FRONT_RIGHT = 3
     return corners
 
 
@@ -152,8 +154,6 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             features = {}
 
-            # ego_status = ego_his_trajs[...,:2].reshape(4)
-            # frame_data['ego_yaw'] = -np.nan_to_num(anno['theta'],nan=np.pi)+np.pi/2
             ann_info = self.data_infos[idx]
 
             ego_vel =ann_info["ego_vel"] [:1]#np.array([ann_info['speed'],0,0])
@@ -164,9 +164,6 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             command_near_xy = np.array(
                 [ann_info['command_near_xy'][0] - ego_translation[0], ann_info['command_near_xy'][1] - ego_translation[1]])
 
-            # command_far_xy = np.array(
-            #     [ann_info['command_far_xy'][0] - ego_translation[0], ann_info['command_far_xy'][1] - ego_translation[1]])
-
             yaw = ann_info['ego_yaw']
             raw_theta = -(yaw-np.pi/2)
             theta_to_lidar = raw_theta
@@ -175,13 +172,9 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
                 [[np.cos(theta_to_lidar), -np.sin(theta_to_lidar)], [np.sin(theta_to_lidar), np.cos(theta_to_lidar)]])
             local_command_xy = rotation_matrix @ command_near_xy
 
-            #local_far_command_xy = rotation_matrix @ command_far_xy
-
             gt_ego_fut_cmd = ego_fut_cmd.reshape(6)
 
             features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(ego_accel),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
-
-            #features["ego_status"] = torch.cat([ torch.tensor(ego_vel),torch.tensor(local_far_command_xy),torch.tensor(local_command_xy), gt_ego_fut_cmd])[None].to(torch.float32)
 
             features["camera_feature"] = img[:4]
 
@@ -189,9 +182,8 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
 
             image_shape[:,0]=img.shape[-2]
             image_shape[:,1]=img.shape[-1]
-            #image_shape[2]=3
 
-            features["img_shape"] = image_shape      #np.array([img.shape[-2],img.shape[-1]])#data["image_wh"][...,::-1] #256,704
+            features["img_shape"] = image_shape
 
             features["lidar2img"] = np.array(img_metas['lidar2img'])[:4]
 
@@ -212,57 +204,91 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             targets["trajectory"] = target_traj
 
             targets["token"] = token
-            #corners1=gt_bboxes_3d.corners[:,[0,3,4,7],:2]
 
             town_name = ann_info['town_name']
             targets["town_name"]=town_name
             world2lidar = np.array(ann_info['sensors']['LIDAR_TOP']['world2lidar'])
-           # ego_xy = np.linalg.inv(world2lidar)[0:2, 3]
             targets["lidar2world"]=np.linalg.inv(world2lidar) #lidar postion
 
-            # for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
-            #     plt.plot(linestring.xy[0],linestring.xy[1],'grey')
-            #
-            # # lidar2world=np.linalg.inv(world2lidar)
-            # #
-            # # global_target=np.concatenate([target_traj[:,:2],np.zeros_like(target_traj[:,:1]),np.ones_like(target_traj[:,:1])],axis=-1)
-            # # global_target=np.einsum("ij,nj->ni",lidar2world,global_target) #.dot(target_traj[:,0],target_traj[:,1],)
-            #
-            # plt.plot(target_traj[:,0],target_traj[:,1],'red')
-            #
-            # # print(corners[0])
-            # #
-            # # print(gt_bboxes_3d_bev[0])
-            #
-            # half_length = 2.44619083405
-            # half_width = 0.91835665702
-            # rear_axle_to_center = 0.39
-            # #
-            # ego_box=compute_corners(np.array([[0,rear_axle_to_center,half_width*2,half_length*2,np.pi/2]]))[0]
-            #
-            # plt.plot(ego_box[:,0],ego_box[:,1],'red')
-            #
-            # for label,agent in zip(category_index[agent_mask],corners[agent_mask]):
-            #     if label==0:
-            #         plt.plot(agent[:,0],agent[:,1],'blue')
-            #     if label==4:
-            #         plt.plot(agent[:,0],agent[:,1],'yellow')
-            #     if label==5:
-            #         plt.plot(agent[:,0],agent[:,1],'green')
-            #
-            # plt.xlim(-32,32)
-            # plt.ylim(-32,32)
-            #
-            # plt.show()
+            if self.type == "train":
+                gt_bboxes_3d_bev = gt_bboxes_3d.bev  # x,y,w,l,heading
 
-            # world2ego= np.array(ann_info['world2ego'])
-            #
-            #targets["ego_xy"]=ann_info['world2ego']
-            # np.dot(world2lidar, np.array(xy[0],xy[1],1.84))
-            #
-            #
-            # np.array([xy[0],xy[1],0,1]).dot(world2lidar)
-#  lidar postion at [-0.39,0,1.84]
+                #gt_bboxes_3d_bev[:, -1] = -(gt_bboxes_3d_bev[:, -1] + np.pi / 2)
+
+                distances = np.linalg.norm(gt_bboxes_3d_bev[:, :2], axis=-1)
+
+                gt_bboxes_3d_sort = gt_bboxes_3d_bev[np.argsort(distances)][:30]
+
+                gt_bboxes_3d_all = np.concatenate([gt_bboxes_3d_sort, np.zeros([30 - len(gt_bboxes_3d_sort), 5])],
+                                                  axis=0)
+
+                agent_labels = np.zeros([30])
+
+                agent_labels[:len(gt_bboxes_3d_sort)] = True
+
+                targets["agent_states"] = gt_bboxes_3d_all
+                targets["agent_labels"] = agent_labels
+
+                map_gt_bboxes_3d = data['map_gt_bboxes_3d'].data.instance_list
+                map_gt_labels_3d = data[
+                    'map_gt_labels_3d'].data  # {'Broken':0, 'Solid':1, 'SolidSolid':2,'Center':3,'TrafficLight':4,'StopSign':5}
+                bev_semantic_map = np.zeros((self.bev_pixel_height, self.bev_pixel_width),
+                                            dtype=np.int64)  # 128,256  front 128
+
+                for map_label in range(6):
+                    map_linestring_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1],
+                                                   dtype=np.uint8)  # 256,128
+                    for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
+                        if label == map_label:
+                            points = np.array(linestring.coords).reshape((-1, 1, 2))
+                            points = self._coords_to_pixel(points)  #
+                            cv2.polylines(map_linestring_mask, [points], isClosed=False, color=255, thickness=2)
+                    map_linestring_mask = np.rot90(map_linestring_mask)[::-1]
+                    entity_mask = map_linestring_mask > 0
+                    bev_semantic_map[entity_mask] = map_label + 1
+
+                corners =compute_corners(gt_bboxes_3d_bev)#fut_boxes[:,0]#
+                category_index = gt_attr_labels[:, 27].to(int)
+
+                for agent_label in range(8):
+                    box_polygon_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1], dtype=np.uint8)
+                    for label, coords in zip(category_index, corners):
+                        if label == agent_label:
+                            exterior = coords.reshape((-1, 1, 2))
+                            exterior = self._coords_to_pixel(exterior)
+                            cv2.fillPoly(box_polygon_mask, [exterior], color=255)
+                    box_polygon_mask = np.rot90(box_polygon_mask)[::-1]
+                    entity_mask = box_polygon_mask > 0
+                    bev_semantic_map[entity_mask] = agent_label + 7
+
+                targets["bev_semantic_map"] = bev_semantic_map
+
+                # for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
+                #     plt.plot(linestring.xy[0],linestring.xy[1],'grey')
+                #
+                # plt.plot(target_traj[:,0],target_traj[:,1],'red')
+                #
+                # half_length = 2.042
+                # half_width = 0.925
+                # rear_axle_to_center = 0.39
+                # #
+                # ego_box=compute_corners(np.array([[0,rear_axle_to_center,half_width*2,half_length*2,np.pi/2]]))[0]
+                #
+                # plt.plot(ego_box[:,0],ego_box[:,1],'red')
+                #
+                # for label,agent in zip(category_index,corners):
+                #     if label==0:
+                #         plt.plot(agent[:,0],agent[:,1],'blue')
+                #     if label==4:
+                #         plt.plot(agent[:,0],agent[:,1],'yellow')
+                #     if label==5:
+                #         plt.plot(agent[:,0],agent[:,1],'green')
+                #
+                # plt.xlim(-32,32)
+                # plt.ylim(-32,32)
+                #
+                # plt.show()
+
             data_dict_path = Path(token_path) / "pad_target.gz"
 
             dump_feature_target_to_pickle(data_dict_path, targets)
@@ -282,7 +308,7 @@ if not os.path.exists(cache_path):
 else:
     print(f"Directory '{cache_path}' already exists.")
 
-for type in ['val','train']  :
+for type in ['train','val']  :
     fut_box = {}
 
     anno_root ="Bench2DriveZoo/data/infos/b2d_"
@@ -300,6 +326,9 @@ for type in ['val','train']  :
     for  data in tqdm(data_loader):
         for key,value in data[0].items():
             fut_box[key]=value
+
+        # if len(fut_box)>100:
+        #     break
 
     save_path=type+"_fut_boxes.gz"
 

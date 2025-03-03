@@ -29,7 +29,6 @@ import time
 
 SAVE_PATH = os.environ.get('SAVE_PATH', None)
 IS_BENCH2DRIVE = os.environ.get('IS_BENCH2DRIVE', None)
-VIS = os.environ.get('VIS', False)
 
 
 def get_entry_point():
@@ -102,7 +101,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
             self.save_path = pathlib.Path(os.environ['SAVE_PATH']) / string
             self.save_path.mkdir(parents=True, exist_ok=False)
             (self.save_path / 'meta').mkdir()
-            if VIS:
+            if 'vis' in SAVE_PATH:
                 (self.save_path / 'rgb_front').mkdir()
                 (self.save_path / 'rgb_front_right').mkdir()
                 (self.save_path / 'rgb_front_left').mkdir()
@@ -286,7 +285,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
                 'id': 'SPEED'
             },
         ]
-        if IS_BENCH2DRIVE and VIS:
+        if IS_BENCH2DRIVE and ('vis' in SAVE_PATH):
             sensors += [
                 {
                     'type': 'sensor.camera.rgb',
@@ -306,7 +305,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
             _, img = cv2.imencode('.jpg', img, encode_param)
             img = cv2.imdecode(img, cv2.IMREAD_COLOR)
             imgs[cam] = img
-        if VIS:
+        if 'vis' in SAVE_PATH:
             bev=cv2.cvtColor(input_data['bev'][1][:, :, :3], cv2.COLOR_BGR2RGB)
         else:
             bev = None

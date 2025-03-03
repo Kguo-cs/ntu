@@ -23,17 +23,6 @@ import sys
 import carla
 import signal
 
-CARLA_ROOT=os.environ.get("CARLA_ROOT")
-Bench2Drive_ROOT=os.environ.get("Bench2Drive_ROOT")
-
-sys.path.append(CARLA_ROOT + "/PythonAPI")
-sys.path.append(CARLA_ROOT + "/PythonAPI/carla")
-sys.path.append(CARLA_ROOT + "/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg")
-
-
-sys.path.append(Bench2Drive_ROOT + '/leaderboard')
-sys.path.append(Bench2Drive_ROOT + '/leaderboard/pad_team_code')
-sys.path.append(Bench2Drive_ROOT + '/scenario_runner')
 
 
 from srunner.scenariomanager.carla_data_provider import *
@@ -221,8 +210,8 @@ class LeaderboardEvaluator(object):
         while attempts < num_max_restarts:
             try:
                 args.port = find_free_port(args.port)
-                #cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
-                cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
+                cmd1 = f"{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}"
+                # cmd1 = f"enroot start --rw --mount {self.carla_path}:{self.carla_path} --mount /tmp/.X11-unix:/tmp/.X11-unix carla /bin/bash -c '{os.path.join(self.carla_path, 'CarlaUE4.sh')} -RenderOffScreen -nosound -carla-rpc-port={args.port} -graphicsadapter={args.gpu_rank}'"
                 self.server = subprocess.Popen(cmd1, shell=True, preexec_fn=os.setsid)
                 print(cmd1, self.server.returncode, flush=True)
                 atexit.register(os.killpg, self.server.pid, signal.SIGKILL)
@@ -232,7 +221,7 @@ class LeaderboardEvaluator(object):
                 client = carla.Client(args.host, args.port)
                 if args.timeout:
                     client_timeout = args.timeout
-                client.set_timeout(100)
+                client.set_timeout(client_timeout)
                 print('seting',args.port,args.host)
 
                 settings = carla.WorldSettings(
@@ -534,9 +523,9 @@ def main():
     parser = argparse.ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--host', default='localhost',
                         help='IP of the host server (default: localhost)')
-    parser.add_argument('--port', default=2000, type=int,
+    parser.add_argument('--port', default=20000, type=int,
                         help='TCP port to listen to (default: 2000)')
-    parser.add_argument('--traffic-manager-port', default=8000, type=int,
+    parser.add_argument('--traffic-manager-port', default=40000, type=int,
                         help='Port to use for the TrafficManager (default: 8000)')
     parser.add_argument('--traffic-manager-seed', default=0, type=int,
                         help='Seed used by the TrafficManager (default: 0)')
@@ -544,11 +533,11 @@ def main():
                         help='Run with debug output', default=0)
     parser.add_argument('--record', type=str, default='',
                         help='Use CARLA recording feature to create a recording of the scenario')
-    parser.add_argument('--timeout', default=600.0, type=float,
+    parser.add_argument('--timeout', default=100.0, type=float,
                         help='Set the CARLA client timeout value in seconds')
 
     # simulation setup
-    parser.add_argument('--routes', required=True,
+    parser.add_argument('--routes',default="leaderboard/data/bench2drive220.xml",
                         help='Name of the routes file to be executed.')
     parser.add_argument('--routes-subset', default='', type=str,
                         help='Execute a specific set of routes')
@@ -556,16 +545,16 @@ def main():
                         help='Number of repetitions per route.')
 
     # agent-related options
-    parser.add_argument("-a", "--agent", type=str,
-                        help="Path to Agent's py file to evaluate", required=True)
-    parser.add_argument("--agent-config", type=str,
-                        help="Path to Agent's configuration file", default="")
+    parser.add_argument("-a", "--agent", type=str,default=os.environ.get("TEAM_AGENT"),
+                        help="Path to Agent's py file to evaluate")
+    parser.add_argument("--agent-config", type=str,default=os.environ.get("TEAM_CONFIG"),
+                        help="Path to Agent's configuration file")
 
     parser.add_argument("--track", type=str, default='SENSORS',
                         help="Participation track: SENSORS, MAP")
-    parser.add_argument('--resume', type=bool, default=False,
+    parser.add_argument('--resume', type=bool, default=True,
                         help='Resume execution from last checkpoint?')
-    parser.add_argument("--checkpoint", type=str, default='./simulation_results.json',
+    parser.add_argument("--checkpoint", type=str, default=os.environ.get("CHECKPOINT_ENDPOINT"),
                         help="Path to checkpoint used for saving statistics and resuming")
     parser.add_argument("--debug-checkpoint", type=str, default='./live_results.txt',
                         help="Path to checkpoint used for saving live results")
@@ -575,8 +564,6 @@ def main():
     statistics_manager = StatisticsManager(arguments.checkpoint, arguments.debug_checkpoint)
     leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager)
     crashed = leaderboard_evaluator.run(arguments)
-
-    del leaderboard_evaluator
 
     if crashed:
         sys.exit(-1)

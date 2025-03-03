@@ -1,3 +1,4 @@
+import random
 import xml.etree.ElementTree as ET
 
 
@@ -9,6 +10,7 @@ def main(base_route, task_num, algo, planner_type):
     tree = ET.parse(f'{base_route}.xml')
     root = tree.getroot()
     case = root.findall('route')
+    random.shuffle(case)
     results = split_list_into_n_parts(case, task_num)
     for index, re in enumerate(results):
         new_root = ET.Element("routes")
@@ -20,9 +22,9 @@ def main(base_route, task_num, algo, planner_type):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("base_route", type=str)
-    parser.add_argument("task_num", type=int)
-    parser.add_argument("algo", type=str)
-    parser.add_argument("planner_type", type=str)
+    parser.add_argument("--base_route",default='/home/ke/PAD/Bench2Drive/leaderboard/data/bench2drive220', type=str)
+    parser.add_argument("--task_num",default=8, type=int)
+    parser.add_argument("--algo",default='pad', type=str)
+    parser.add_argument("--planner_type",default='traj', type=str)
     args = parser.parse_args()
     main(args.base_route, args.task_num, args.algo, args.planner_type)

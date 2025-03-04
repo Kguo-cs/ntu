@@ -299,7 +299,7 @@ def my_collate(batch):
     return batch
 
 data_root="Bench2DriveZoo/data/bench2drive"
-cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache/"
+cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache2/"
 
 if not os.path.exists(cache_path):
     # Create the directory
@@ -321,7 +321,7 @@ for type in ['train','val']  :
 
     nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality)
 
-    data_loader=DataLoader(nuscenes_data,batch_size=1, pin_memory=False,collate_fn=my_collate)#num_workers=12,prefetch_factor=32,
+    data_loader=DataLoader(nuscenes_data,batch_size=1, pin_memory=False,num_workers=16,prefetch_factor=32,collate_fn=my_collate)#
 
     for  data in tqdm(data_loader):
         for key,value in data[0].items():

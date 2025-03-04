@@ -30,7 +30,7 @@ bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/k
 
 
 qstat -ans
-export PBS_JOBID=29640.pbs111  
+export PBS_JOBID=29877.pbs111  
 echo "$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.15-py3.7-linux-x86_64.egg" >> /home/users/ntu/lyuchen/miniconda3/envs/pad/lib/python3.8/site-packages/carla.pth # python 3.8 also works well, please set YOUR_CONDA_PATH and YOUR_CONDA_ENV_NAME
 
 sh cuda_12.1.1_530.30.02_linux.run  --toolkitpath=/home/users/ntu/lyuchen/scratch/keguo_projects/cuda --toolkit --silent

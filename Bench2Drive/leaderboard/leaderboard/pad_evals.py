@@ -62,7 +62,7 @@ while True:
         # Replace 'your_script.py' with the path to your Python script
         print("Starting script...")
         #result = run_script_with_timeout('leaderboard/leaderboard/pad_eval.py') #
-        result=subprocess.run(['python', 'leaderboard/leaderboard/pad_vis.py'], check=True, timeout=3600)  # Run the script
+        result=subprocess.run(['python', 'leaderboard/leaderboard/pad_eval.py'], check=True, timeout=3600)  # Run the script
         # If the script finishes correctly, break the loop (exit)
         print("Script finished successfully!")
         break

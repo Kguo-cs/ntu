@@ -16,7 +16,7 @@ from nuplan.planning.training.experiments.cache_metadata_entry import (
     save_cache_metadata,
 )
 
-from navsim.planning.metric_caching.train_chache_processor import MetricCacheProcessor
+from navsim.planning.metric_caching.train_cache_processor import MetricCacheProcessor
 from navsim.planning.scenario_builder.navsim_scenario import NavSimScenario
 from navsim.common.dataloader import SceneLoader, SceneFilter
 from navsim.common.dataclasses import SensorConfig, Scene

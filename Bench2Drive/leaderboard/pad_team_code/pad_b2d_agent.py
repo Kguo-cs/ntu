@@ -15,7 +15,6 @@ import numpy as np
 from PIL import Image
 from torchvision import transforms as T
 from pad_team_code.pid_controller import PIDController
-from pad_team_code.lqr_controller import LQRController
 from team_code.planner import RoutePlanner
 from leaderboard.autoagents import autonomous_agent
 from bench2driveMMCV import Config
@@ -43,7 +42,6 @@ class padAgent(autonomous_agent.AutonomousAgent):
         self.last_moving_step = -1
         self.last_steer = 0
         self.pidcontroller = PIDController()
-        self.lqrcontroller = LQRController()
         self.config_path = path_to_conf_file.split('+')[0]
         self.ckpt_path = path_to_conf_file.split('+')[1]
         if IS_BENCH2DRIVE:

@@ -45,7 +45,7 @@ class PadAgent(AbstractAgent):
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
-                self.worker = RayDistributedNoTorch(threads_per_node=8)
+                self.worker = RayDistributedNoTorch(threads_per_node=16)
                 self.worker_map=worker_map
 
             if config.b2d:

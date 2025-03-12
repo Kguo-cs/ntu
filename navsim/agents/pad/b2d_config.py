@@ -21,6 +21,7 @@ class PadConfig:
 
     proposal_num: int = 64
     point_cloud_range= [-32, -32, 0.0, 32, 32,4.0]
+    num_points_in_pillar: int=4
 
     half_length = 2.042+0.25
     half_width= 0.925+0.1
@@ -31,17 +32,14 @@ class PadConfig:
     num_agent_pose=6
     command_num=7
 
-    num_bev_layers: int=2
-    num_points_in_pillar: int=4
-
-    image_architecture: str = "resnet34"
-
     # Transformer
     tf_d_model: int = 512
     tf_d_ffn: int = 2048
     tf_num_layers: int = 3
     tf_num_head: int = 8
     tf_dropout: float = 0.1
+    num_bev_layers: int=2
+    image_architecture: str = "resnet34"
 
     # loss weights
     trajectory_weight: float = 1

@@ -19,22 +19,17 @@ class PadConfig:
     traj_proposal_query: bool=True
     score_proposal_query: bool=True
 
-    bev_map: bool=True
-    bev_agent: bool=True
+    bev_map: bool=False
+    bev_agent: bool=False
 
     double_score: bool=True
     agent_pred: bool=True
     area_pred: bool=True
 
     proposal_num: int = 64
-    inter_weight: float = 0.1
-
-    score_weight: int = 10
-    sub_score_weight: int = 1
-
-    num_bev_layers: int=2
-
     point_cloud_range = [-32, -32, -2.0, 32, 32,6.0]
+    num_points_in_pillar: int=4
+
     half_length: float= 2.588+0.15
     half_width: float =1.1485+0.1
     rear_axle_to_center: float = 1.461
@@ -44,11 +39,28 @@ class PadConfig:
     num_agent_pose: int=41
     command_num: int=4
 
-    num_points_in_pillar: int=4
+    # Transformer
+    tf_d_model: int = 512
+    tf_d_ffn: int = 2048
+    tf_num_layers: int = 3
+    tf_num_head: int = 8
+    tf_dropout: float = 0.1
+    num_bev_layers: int=2
+    image_architecture: str = "resnet34"
 
+    # loss weights
+    trajectory_weight: float = 1
+    inter_weight: float =  0.1
+    sub_score_weight: int = 1
+    final_score_weight: int = 1
+    pred_ce_weight: int = 1
+    pred_l1_weight: int = 0.1
+    pred_area_weight: int = 1
+    prev_weight: int = 0.1
+
+    #others
     trajectory_sampling: TrajectorySampling = TrajectorySampling(time_horizon=4, interval_length=0.5)
 
-    image_architecture: str = "resnet34"
     lidar_architecture: str = "resnet34"
 
     latent: bool = False
@@ -101,21 +113,8 @@ class PadConfig:
     use_depth = False
     add_features = True
 
-    # Transformer
-    tf_d_model: int = 512
-    tf_d_ffn: int = 2048
-    tf_num_layers: int = 3
-    tf_num_head: int = 8
-    tf_dropout: float = 0.0
-
     # detection
     num_bounding_boxes: int = 30
-
-    # loss weights
-    trajectory_weight: float = 10.0
-    agent_class_weight: float = 10.0
-    agent_box_weight: float = 1.0
-    bev_semantic_weight: float = 10.0
 
     # BEV mapping
     bev_semantic_classes = {

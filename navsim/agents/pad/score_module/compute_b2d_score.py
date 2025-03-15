@@ -103,7 +103,7 @@ def get_collision_type(
 def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
     n_future = _ego_coords.shape[1]
     _num_proposals=_ego_coords.shape[0]
-    fut_mask=fut_box_corners.all(-1).all(-1)
+    fut_mask=fut_box_corners.any(-1).any(-1)
 
     node_capacity=10
 

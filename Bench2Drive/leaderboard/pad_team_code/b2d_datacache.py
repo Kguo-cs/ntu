@@ -299,7 +299,7 @@ def my_collate(batch):
     return batch
 
 data_root="Bench2DriveZoo/data/bench2drive"
-cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache2/"
+cache_path=os.environ["NAVSIM_EXP_ROOT"] + "/B2d_cache/"
 
 if not os.path.exists(cache_path):
     # Create the directory
@@ -308,7 +308,7 @@ if not os.path.exists(cache_path):
 else:
     print(f"Directory '{cache_path}' already exists.")
 
-for type in ['train','val']  :
+for type in ['train','val']  :#
     fut_box = {}
 
     anno_root ="Bench2DriveZoo/data/infos/b2d_"

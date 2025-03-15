@@ -117,10 +117,9 @@ class PadAgent(AbstractAgent):
         else:
             metric_cache_paths = self.test_metric_cache_paths
 
-        target_trajectory = targets["trajectory"].detach()
+        target_trajectory = targets["trajectory"]
         proposals=proposals.detach()
 
-        trajectory = proposals.cpu().numpy()
         target_traj = target_trajectory.cpu().numpy()
 
         if self.b2d:
@@ -176,7 +175,7 @@ class PadAgent(AbstractAgent):
                     self.map_infos[key] = torch.tensor(value).to(target_trajectory.device)
                 self.cuda_map=True
 
-            for token, town_name, min_index, comfort, dist, xy,global_conners,_ego_coords in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
+            for token, town_name, min_index, comfort, dist, xy,global_conners,local_corners in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]
 
                 dist_to_cur = torch.linalg.norm(all_lane_points[:,:2] - xy, dim=-1)
@@ -184,7 +183,7 @@ class PadAgent(AbstractAgent):
                 nearby_point = all_lane_points[dist_to_cur < dist]
 
                 lane_xy = nearby_point[:, :2]
-                lane_width = nearby_point[:, 2]
+                lane_width = nearby_point[:, 2]+0.1
                 lane_id = nearby_point[:, -1]
 
                 dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
@@ -217,7 +216,7 @@ class PadAgent(AbstractAgent):
 
                 data_dict = {
                     "fut_box_corners": metric_cache_paths[token],
-                    "_ego_coords": _ego_coords[:-1],
+                    "_ego_coords": local_corners[:-1],
                     "min_index": min_index,
                     "comfort": comfort,
                     "ego_areas": ego_areas.cpu().numpy(),
@@ -230,7 +229,7 @@ class PadAgent(AbstractAgent):
                     "poses": poses,
                     "test": test
                 }
-                for token, poses in zip(targets["token"], trajectory)
+                for token, poses in zip(targets["token"], proposals.cpu().numpy())
             ]
 
         if self.ray:
@@ -258,7 +257,7 @@ class PadAgent(AbstractAgent):
             return final_scores, best_scores, target_scores, key_agent_corners, key_agent_labels, all_ego_areas
 
     def score_loss(self, pred_logit, pred_logit2,agents_state, pred_area_logits, target_scores, gt_states, gt_valid,
-                   gt_ego_areas,config):
+                   gt_ego_areas):
 
         if agents_state is not None:
             pred_states = agents_state[..., :-gt_states.shape[-3]].reshape(gt_states.shape)
@@ -344,7 +343,7 @@ class PadAgent(AbstractAgent):
             sub_score_loss, final_score_loss, pred_ce_loss, pred_l1_loss, pred_area_loss = self.score_loss(
                 pred["pred_logit"],pred["pred_logit2"],
                 pred["pred_agents_states"], pred["pred_area_logit"]
-                , target_scores, gt_states, gt_valid, gt_ego_areas,config)
+                , target_scores, gt_states, gt_valid, gt_ego_areas)
         else:
             sub_score_loss = final_score_loss = pred_ce_loss = pred_l1_loss = pred_area_loss = 0
 

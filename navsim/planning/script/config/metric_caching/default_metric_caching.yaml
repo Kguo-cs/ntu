@@ -13,7 +13,7 @@ defaults:
 
 # Cache parameters
 cache:
-  cache_path: ${oc.env:NAVSIM_EXP_ROOT}/test_metric_cache
+  cache_path: ${oc.env:NAVSIM_EXP_ROOT}/train_metric_cache
   use_cache_without_dataset: false                    
   force_feature_computation: false
 

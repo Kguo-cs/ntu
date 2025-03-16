@@ -12,8 +12,8 @@ class PadConfig:
     traj_proposal_query: bool=True
     score_proposal_query: bool=True
 
-    bev_map: bool=False
-    bev_agent: bool=False
+    bev_map: bool=True
+    bev_agent: bool=True
 
     double_score: bool=True
     agent_pred: bool=True
@@ -50,3 +50,16 @@ class PadConfig:
     pred_l1_weight: int = 0.1
     pred_area_weight: int = 1
     prev_weight: int = 0.1
+    agent_class_weight: float = 1.0
+    agent_box_weight: float = 0.1
+    bev_semantic_weight: float = 1.0
+
+    # detection
+    num_bounding_boxes: int = 30
+
+    num_bev_classes = 15
+    bev_features_channels: int = 64
+    lidar_resolution_width = 256
+    lidar_resolution_height = 256
+
+    latent: bool = False

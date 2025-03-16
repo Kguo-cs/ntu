@@ -18,6 +18,7 @@ from navsim.agents.pad.pad_features import PadFeatureBuilder
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 import math
 from .score_module.compute_b2d_score import compute_corners_torch
+from navsim.agents.transfuser.transfuser_loss import _agent_loss
 
 class PadAgent(AbstractAgent):
     def __init__(
@@ -346,6 +347,17 @@ class PadAgent(AbstractAgent):
         else:
             sub_score_loss = final_score_loss = pred_ce_loss = pred_l1_loss = pred_area_loss = 0
 
+        if pred["agent_states"] is not None:
+            agent_class_loss, agent_box_loss = _agent_loss(targets, pred, config)
+        else:
+            agent_class_loss = 0
+            agent_box_loss = 0
+
+        if pred["bev_semantic_map"] is not None:
+            bev_semantic_loss = F.cross_entropy(pred["bev_semantic_map"], targets["bev_semantic_map"].long())
+        else:
+            bev_semantic_loss = 0
+
         loss = (
                 config.trajectory_weight * trajectory_loss
                 + config.sub_score_weight * sub_score_loss
@@ -353,6 +365,10 @@ class PadAgent(AbstractAgent):
                 + config.pred_ce_weight * pred_ce_loss
                 + config.pred_l1_weight * pred_l1_loss
                 + config.pred_area_weight * pred_area_loss
+                + config.agent_class_weight * agent_class_loss
+                + config.agent_box_weight * agent_box_loss
+                + config.bev_semantic_weight * bev_semantic_loss
+
         )
 
         pdm_score = pred["pdm_score"].detach()

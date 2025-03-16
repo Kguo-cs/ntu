@@ -120,8 +120,6 @@ class PadAgent(AbstractAgent):
         target_trajectory = targets["trajectory"]
         proposals=proposals.detach()
 
-        target_traj = target_trajectory.cpu().numpy()
-
         if self.b2d:
             data_points = []
 
@@ -132,7 +130,7 @@ class PadAgent(AbstractAgent):
             all_proposals_xy=all_proposals[:, :,:, :2]
             all_proposals_heading=all_proposals[:, :,:, 2:]
 
-            all_pos = all_proposals_xy.reshape(len(target_traj),-1, 2)
+            all_pos = all_proposals_xy.reshape(len(target_trajectory),-1, 2)
 
             mid_points = (all_pos.amax(1) + all_pos.amin(1)) / 2
 
@@ -160,9 +158,9 @@ class PadAgent(AbstractAgent):
 
             global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[..., :2]
 
-            l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:,None, ..., :2], dim=-1).mean(-1)
+            # l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:,None, ..., :2], dim=-1).mean(-1)
 
-            min_indexs = torch.argmin(l2, dim=1)
+            #min_indexs = torch.argmin(l2, dim=1)
 
             vel=vel[:,:-1]
 
@@ -175,7 +173,7 @@ class PadAgent(AbstractAgent):
                     self.map_infos[key] = torch.tensor(value).to(target_trajectory.device)
                 self.cuda_map=True
 
-            for token, town_name, min_index, comfort, dist, xy,global_conners,local_corners in zip(targets["token"], targets["town_name"],  min_indexs.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
+            for token, town_name, proposal,target_traj, comfort, dist, xy,global_conners,local_corners in zip(targets["token"], targets["town_name"], proposals.cpu().numpy(),  target_trajectory.cpu().numpy(), comforts.cpu().numpy(), dists.cpu().numpy(), xys, global_ego_corners_centers,ego_corners_ttc.cpu().numpy()):
                 all_lane_points = self.map_infos[town_name[:6]]
 
                 dist_to_cur = torch.linalg.norm(all_lane_points[:,:2] - xy, dim=-1)
@@ -217,7 +215,8 @@ class PadAgent(AbstractAgent):
                 data_dict = {
                     "fut_box_corners": metric_cache_paths[token],
                     "_ego_coords": local_corners[:-1],
-                    "min_index": min_index,
+                    "target_traj": target_traj,
+                    "proposal":proposal,
                     "comfort": comfort,
                     "ego_areas": ego_areas.cpu().numpy(),
                 }
@@ -246,7 +245,7 @@ class PadAgent(AbstractAgent):
         if test:
             l2_2s = torch.linalg.norm(proposals[:, 0] - target_trajectory, dim=-1)[:, :4]
 
-            return final_scores[:, 0].mean(), best_scores.mean(), final_scores[:, 1:], l2_2s.mean(), target_scores[:, 0]
+            return final_scores[:, 0].mean(), best_scores.mean(), final_scores[:, 0], l2_2s.mean(), target_scores[:, 0]
         else:
             key_agent_corners = torch.FloatTensor(np.stack([res[1] for res in all_res])).to(proposals.device)
 

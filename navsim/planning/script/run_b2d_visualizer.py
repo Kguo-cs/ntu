@@ -65,7 +65,7 @@ def main(cfg: DictConfig) -> None:
     logger.info("Num validation samples: %d", len(val_data))
 
 
-    agent._checkpoint_path = "/home/ke/PAD/exp/b2d_result/B2d_prev01_inter01_l101/03.14_12.34/epoch=20-step=16128.ckpt"
+    agent._checkpoint_path = "/home/ke/PAD/exp/b2d_result/B2d_p32_prev01_inter01_w01_allw10/03.15_19.56/epoch=13-step=10752.ckpt" #"/home/ke/PAD/exp/b2d_result/B2d_prev01_inter01_l101/03.14_12.34/epoch=20-step=16128.ckpt"
 
     agent.initialize()
 
@@ -95,7 +95,7 @@ def main(cfg: DictConfig) -> None:
         pdm_score = (torch.sigmoid(pred['pred_logit']) + torch.sigmoid(pred['pred_logit2']))[0] / 2
 
         proposals = pred["proposals"]
-        proposals = torch.cat([pred["trajectory"][:, None], proposals], dim=1)
+        #proposals = torch.cat([pred["trajectory"][:, None], proposals], dim=1)
 
         metric_cache_paths = agent.test_metric_cache_paths
 
@@ -149,7 +149,7 @@ def main(cfg: DictConfig) -> None:
 
         l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:, None, ..., :2], dim=-1).mean(-1)
 
-        min_indexs = torch.argmin(l2, dim=1)
+        min_indexs = torch.argsort(l2, dim=1)
 
         vel = vel[:, :-1]
 
@@ -231,9 +231,9 @@ def main(cfg: DictConfig) -> None:
             # print(np.mean(l2_list))
 
 
-            key_agent_corners = torch.FloatTensor(np.stack([res[1] for res in all_res])).to(proposals.device)
+            key_agent_corners =np.stack([res[1] for res in all_res])[0]
 
-            key_agent_labels = torch.BoolTensor(np.stack([res[2] for res in all_res])).to(proposals.device)
+            key_agent_labels = np.stack([res[2] for res in all_res])[0]
 
             all_ego_areas = torch.BoolTensor(np.stack([res[3] for res in all_res])).to(proposals.device)
             target_dist_to_road = dist_to_lane[:, -1:] - lane_width[:, None, None, None]
@@ -245,13 +245,17 @@ def main(cfg: DictConfig) -> None:
             #     print(target_on_road)
             collision_score=target_scores[0,0,0]
 
-            print(torch.argmax(pdm_score,dim=0))
+           # print(torch.argmax(pdm_score,dim=0))
 
-            print(pdm_score[torch.argmax(pdm_score,dim=0)[-1]])
+            #print(pdm_score[torch.argmax(pdm_score,dim=0)[-1]])
+
 
             if not collision_score.all():
+                print(features["ego_status"][0])
+                print(pdm_score[torch.argmax(pdm_score[:,-1],dim=0)])
+                print(target_scores[0][0])
 
-                fut_box_corners=metric_cache_paths[token]
+                fut_box_corners = metric_cache_paths[token]
                 fut_mask = fut_box_corners.any(-1).any(-1)
 
                 fut_box_corners_xyz = np.concatenate(
@@ -260,8 +264,23 @@ def main(cfg: DictConfig) -> None:
 
                 global_fut_box_corners = np.einsum("ij,ptkj->ptki", lidar2worlds[0].cpu().numpy(), fut_box_corners_xyz)[...,:2]
 
+                key_agent_corners_xyz = np.concatenate(
+                    [key_agent_corners, np.zeros_like(key_agent_corners[..., :1]),
+                     np.ones_like(key_agent_corners[..., :1])], axis=-1)
+
+                global_key_agent_corners = np.einsum("ij,pqtkj->pqtki", lidar2worlds[0].cpu().numpy(), key_agent_corners_xyz)[...,:2]
+
+
+                local_waypoins=features["ego_status"][0][0][3:5].cpu().numpy()
+                local_waypoins = np.concatenate(
+                    [local_waypoins, np.zeros_like(local_waypoins[..., :1]),
+                     np.ones_like(local_waypoins[..., :1])], axis=-1)
+
+                global_waypoint = np.einsum("ij,j->i", lidar2worlds[0].cpu().numpy(), local_waypoins)[...,:2]
 
                 fig, (ax, ax2) = plt.subplots(2)  # note we must use plt.subplots, not plt.subplot
+
+                ax.scatter(global_waypoint[0], global_waypoint[1], marker='*', zorder=5,s=100)
 
                 global_conners=global_conners.cpu().numpy()
 
@@ -278,14 +297,34 @@ def main(cfg: DictConfig) -> None:
                             )
                             ax.add_patch(polygon)
 
+                for i in range(len(global_key_agent_corners)):
+                    for t in range(6):
+                        if key_agent_labels[i][1][t]:
+                            polygon = plt.Polygon(
+                                global_key_agent_corners[i][1][t][:4],
+                                edgecolor='orange',
+                                fill=False,
+                                linewidth=2,
+                                alpha=1-t*0.15,
+                                zorder=6
+                            )
+                            ax.add_patch(polygon)
 
-                for i in range(1):
+
+
+
+
+                for i in range(len(global_conners)):
                     if i==len(global_conners)-1:
                         color='b'
+                        zorder=9
+
                     elif i==0:
                         color='r'
+                        zorder=10
                     else:
                         color='g'
+                        zorder=2
                     for t in range(6):
                         polygon = plt.Polygon(
                             global_conners[i][t][:4],
@@ -293,7 +332,7 @@ def main(cfg: DictConfig) -> None:
                             fill=False,
                             linewidth=2,  # 线条宽度
                             alpha=1-t*0.15,
-                            zorder=2
+                            zorder=zorder
                         )
                         ax.add_patch(polygon)
                     # plt.plot(global_conners[i][:,-1,0],global_conners[i][:,-1,1],color=color)

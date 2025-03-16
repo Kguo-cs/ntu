@@ -6,6 +6,7 @@ from nuplan.planning.script.builders.logging_builder import build_logger
 
 from navsim.planning.metric_caching.train_caching import cache_data
 from navsim.planning.script.builders.worker_pool_builder import build_worker
+from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,8 @@ def main(cfg: DictConfig) -> None:
     build_logger(cfg)
 
     # Build worker
-    worker = build_worker(cfg)
+    # worker = build_worker(cfg)
+    worker = RayDistributedNoTorch(threads_per_node=8)
 
     # Precompute and cache all features
     logger.info("Starting Metric Caching...")

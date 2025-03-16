@@ -247,9 +247,9 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
 
 def get_scores(args):
 
-    return [get_sub_score(a["fut_box_corners"],a["_ego_coords"],a["min_index"],a["comfort"],a["ego_areas"]) for a in args]
+    return [get_sub_score(a["fut_box_corners"],a["_ego_coords"],a["proposal"],a["target_traj"],a["comfort"],a["ego_areas"]) for a in args]
 
-def get_sub_score(fut_box_corners,_ego_coords,min_index,comfort,ego_areas):
+def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_areas):
 
     collsions,ttc_collision,key_agent_corners,key_agent_labels=evaluate_coll(fut_box_corners,_ego_coords,ego_areas)
 
@@ -260,17 +260,31 @@ def get_sub_score(fut_box_corners,_ego_coords,min_index,comfort,ego_areas):
     on_road_all=ego_areas[:,:,1]
     on_route_all=ego_areas[:,:,2]
 
-    drivable_area_compliance=on_road_all.all(-1) & on_route_all.all(-1)
+    drivable_area_compliance=on_road_all.all(-1) & on_route_all.any(-1)
 
     ego_areas=np.stack([on_road_all,on_route_all],axis=-1)
 
-    # l2= np.linalg.norm(proposals[...,:2] - target_trajectory[ None,...,:2],axis=-1).mean(-1)
-    #
-    # min_index=np.argmin(l2,axis=0)
-    
-    progress =np.zeros([len(on_road_all)])
 
-    progress[min_index]=1
+    # progress =np.zeros([len(on_road_all)])
+    #
+    # progress[min_index]=1
+
+    target_line=np.concatenate([np.zeros([1,2]),target_traj[...,:2]])
+
+    centerline=linestrings(target_line)
+
+    target_progress = centerline.project(Point(target_line[-1]))
+
+    progress = np.ones([len(proposals)])
+
+    if target_progress != 0:
+        for proposal_idx,proposal in enumerate(proposals[...,:2]):
+            # start_point = Point(proposal[0])
+            end_point = Point(proposal[-1])
+            progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
+
+        progress = np.clip(progress/ target_progress, a_min=0, a_max=1)
+
 
     # proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
     #

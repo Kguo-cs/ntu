@@ -537,7 +537,7 @@ def main():
                         help='Set the CARLA client timeout value in seconds')
 
     # simulation setup
-    parser.add_argument('--routes',default="leaderboard/data/bench2drive220.xml",
+    parser.add_argument('--routes',default=os.getenv("ROUTES"),
                         help='Name of the routes file to be executed.')
     parser.add_argument('--routes-subset', default='', type=str,
                         help='Execute a specific set of routes')

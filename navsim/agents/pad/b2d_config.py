@@ -47,6 +47,6 @@ class PadConfig:
     sub_score_weight: int = 1
     final_score_weight: int = 1
     pred_ce_weight: int = 1
-    pred_l1_weight: int = 1
+    pred_l1_weight: int = 0.1
     pred_area_weight: int = 1
     prev_weight: int = 0.1

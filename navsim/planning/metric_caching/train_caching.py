@@ -139,7 +139,7 @@ def cache_data(cfg: DictConfig, worker: WorkerPool) -> None:
     ]
     logger.info("Starting metric caching of %s files...", str(len(data_points)))
 
-    cache_results =worker_map(worker, cache_scenarios, data_points)
+    cache_results = cache_scenarios(data_points)#worker_map(worker, cache_scenarios, data_points)
 
     num_success = sum(result.successes for result in cache_results)
     num_fail = sum(result.failures for result in cache_results)

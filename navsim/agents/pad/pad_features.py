@@ -128,18 +128,18 @@ class PadTargetBuilder(AbstractTargetBuilder):
                 num_trajectory_frames=self._config.trajectory_sampling.num_poses
             ).poses
         )
-        # frame_idx = scene.scene_metadata.num_history_frames - 1
-        # annotations = scene.frames[frame_idx].annotations
-        # ego_pose = StateSE2(*scene.frames[frame_idx].ego_status.ego_pose)
+        frame_idx = scene.scene_metadata.num_history_frames - 1
+        annotations = scene.frames[frame_idx].annotations
+        ego_pose = StateSE2(*scene.frames[frame_idx].ego_status.ego_pose)
 
-        # agent_states, agent_labels = self._compute_agent_targets(annotations)
-        # bev_semantic_map = self._compute_bev_semantic_map(annotations, scene.map_api, ego_pose)
+        agent_states, agent_labels = self._compute_agent_targets(annotations)
+        bev_semantic_map = self._compute_bev_semantic_map(annotations, scene.map_api, ego_pose)
 
         return {
             "trajectory": trajectory,
-            # "agent_states": agent_states,
-            # "agent_labels": agent_labels,
-            # "bev_semantic_map": bev_semantic_map,
+            "agent_states": agent_states,
+            "agent_labels": agent_labels,
+            "bev_semantic_map": bev_semantic_map,
             "token":scene.scene_metadata.initial_token
         }
 

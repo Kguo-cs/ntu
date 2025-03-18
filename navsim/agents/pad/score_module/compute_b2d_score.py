@@ -275,15 +275,36 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     target_progress = centerline.project(Point(target_line[-1]))
 
-    progress = np.ones([len(proposals)])
+    raw_progress = np.ones([len(proposals)])
 
-    if target_progress != 0:
-        for proposal_idx,proposal in enumerate(proposals[...,:2]):
-            # start_point = Point(proposal[0])
-            end_point = Point(proposal[-1])
-            progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
+    # if target_progress != 0:
+    for proposal_idx,proposal in enumerate(proposals[...,:2]):
+        # start_point = Point(proposal[0])
+        end_point = Point(proposal[-1])
+        raw_progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
 
-        progress = np.clip(progress/ target_progress, a_min=0, a_max=1)
+    raw_progress = np.clip(raw_progress, a_min=0, a_max=None)
+
+    multiplicate_metric_scores=collision*drivable_area_compliance
+    raw_progress=multiplicate_metric_scores*raw_progress
+
+    max_raw_progress = np.maximum(raw_progress, target_progress)
+
+    progress_distance_threshold=5
+
+    fast_mask = max_raw_progress > progress_distance_threshold
+
+    normalized_progress = np.ones([len(raw_progress)], dtype=np.float64)
+
+    normalized_progress[fast_mask] = raw_progress[fast_mask] / max_raw_progress[fast_mask]
+    normalized_progress[(~fast_mask) & (multiplicate_metric_scores == 0)] = 0
+
+
+    # l2=np.linalg.norm(proposals[...,:2] - target_traj[...,:2] [ None],axis=-1)
+    #
+    # l2_2s=l2[:,:4].mean(-1)
+    #
+    # progress=np.exp(-l2_2s/5)
 
 
     # proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
@@ -304,11 +325,11 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
     
     # comfort=(acc<10).all(-1) #& (desired_speed<15) & (np.abs(yaw_rate)<2).all(-1) & (np.abs(yaw_accel)<4).all(-1)
 
-    progress=collision*drivable_area_compliance*progress
+    #progress=collision*drivable_area_compliance*progress
 
-    final_scores=collision*drivable_area_compliance*(ttc*5/12+progress*5/12+comfort*2/12)
+    final_scores=collision*drivable_area_compliance*(ttc*5/12+normalized_progress*5/12+comfort*2/12)
 
-    target_scores=np.stack([collision,drivable_area_compliance,progress,ttc,comfort,final_scores],axis=-1)
+    target_scores=np.stack([collision,drivable_area_compliance,normalized_progress,ttc,comfort,final_scores],axis=-1)
 
     #print(target_scores[0])
     # if target_scores.mean()!=1:

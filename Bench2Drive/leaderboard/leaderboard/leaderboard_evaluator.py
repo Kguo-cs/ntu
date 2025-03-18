@@ -523,9 +523,9 @@ def main():
     parser = argparse.ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--host', default='localhost',
                         help='IP of the host server (default: localhost)')
-    parser.add_argument('--port', default=20000, type=int,
+    parser.add_argument('--port', default=20004, type=int,
                         help='TCP port to listen to (default: 2000)')
-    parser.add_argument('--traffic-manager-port', default=40000, type=int,
+    parser.add_argument('--traffic-manager-port', default=40004, type=int,
                         help='Port to use for the TrafficManager (default: 8000)')
     parser.add_argument('--traffic-manager-seed', default=0, type=int,
                         help='Seed used by the TrafficManager (default: 0)')

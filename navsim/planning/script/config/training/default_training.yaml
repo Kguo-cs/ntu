@@ -14,7 +14,7 @@ defaults:
   - agent: navsim_agent
   - _self_
 
-split: trainval
+split: test
 cache_path: ${oc.env:NAVSIM_EXP_ROOT}/navsim_cache
 use_cache_without_dataset: true # load the training samples from the cache. scene-filter will be ignored
 force_cache_computation: false

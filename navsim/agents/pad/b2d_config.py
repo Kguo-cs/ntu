@@ -12,8 +12,8 @@ class PadConfig:
     traj_proposal_query: bool=True
     score_proposal_query: bool=True
 
-    bev_map: bool=True
-    bev_agent: bool=True
+    bev_map: bool=False
+    bev_agent: bool=False
 
     double_score: bool=True
     agent_pred: bool=True
@@ -26,15 +26,15 @@ class PadConfig:
     half_length = 2.042+0.25
     half_width= 0.925+0.1
     rear_axle_to_center =0.39
-    lidar_height=2.05
+    lidar_height=1.84
 
     num_poses=6
     num_agent_pose=6
     command_num=7
 
     # Transformer
-    tf_d_model: int = 512
-    tf_d_ffn: int = 2048
+    tf_d_model: int = 256
+    tf_d_ffn: int = 1024
     tf_num_layers: int = 3
     tf_num_head: int = 8
     tf_dropout: float = 0.1

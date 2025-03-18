@@ -22,8 +22,8 @@ def main(base_route, task_num, algo, planner_type):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_route",default='/home/ke/PAD/Bench2Drive/leaderboard/data/bench2drive220', type=str)
-    parser.add_argument("--task_num",default=8, type=int)
+    parser.add_argument("--base_route",default='/home/ke/PAD/Bench2Drive/leaderboard/data/no_leak', type=str)
+    parser.add_argument("--task_num",default=1, type=int)
     parser.add_argument("--algo",default='pad', type=str)
     parser.add_argument("--planner_type",default='traj', type=str)
     args = parser.parse_args()

@@ -27,13 +27,13 @@ class PadConfig:
     area_pred: bool=True
 
     proposal_num: int = 64
-    point_cloud_range = [-32, -32, -2.0, 32, 32,6.0]
+    point_cloud_range = [-32, -32, 0.0, 32, 32,4.0]
     num_points_in_pillar: int=4
 
-    half_length: float= 2.588+0.15
+    half_length: float= 2.588+0.25
     half_width: float =1.1485+0.1
     rear_axle_to_center: float = 1.461
-    lidar_height: float = 0#1.777-0.2
+    lidar_height: float = 1.777 #-0.2
 
     num_poses: int=8
     num_agent_pose: int=41
@@ -57,6 +57,9 @@ class PadConfig:
     pred_l1_weight: int = 0.1
     pred_area_weight: int = 1
     prev_weight: int = 0.1
+    agent_class_weight: float = 1.0
+    agent_box_weight: float = 0.1
+    bev_semantic_weight: float = 1.0
 
     #others
     trajectory_sampling: TrajectorySampling = TrajectorySampling(time_horizon=4, interval_length=0.5)

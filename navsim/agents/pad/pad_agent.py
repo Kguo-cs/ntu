@@ -68,6 +68,7 @@ class PadAgent(AbstractAgent):
 
                 metric_cache = MetricCacheLoader(Path(os.getenv("NAVSIM_EXP_ROOT") + "/train_metric_cache"))
                 self.train_metric_cache_paths = metric_cache.metric_cache_paths
+                metric_cache = MetricCacheLoader(Path(os.getenv("NAVSIM_EXP_ROOT") + "/test_metric_cache"))
                 self.test_metric_cache_paths = metric_cache.metric_cache_paths
 
                 self.get_scores = get_scores

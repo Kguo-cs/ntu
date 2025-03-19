@@ -73,5 +73,43 @@ def get_sub_score( metric_cache,poses,test):
                      ego_progress,time_to_collision_within_bound,comfort,final_scores
                      ],axis=-1)#[:,None]
 
+    if not test:
+        for i in range(len(scores)):
+            # proposal_collided_track_ids=scorer.proposal_collided_track_ids[i]
+            proposal_fault_collided_track_ids = scorer.proposal_fault_collided_track_ids[i]
+            # temp_collided_track_ids=scorer.temp_collided_track_ids[i]
+
+            if len(proposal_fault_collided_track_ids):
+                col_token=proposal_fault_collided_track_ids[0]
+                collision_time_idcs = int(scorer._collision_time_idcs[i])+1
+
+                for time_idx in range(collision_time_idcs):
+                    if  col_token in scorer._observation[time_idx].tokens:
+                        key_agent_labels[i][0][time_idx] = True
+                        key_agent_corners[i][0][time_idx]=np.array(scorer._observation[time_idx][col_token].boundary.xy).T[:4]
+
+            ttc_collided_track_ids = scorer.ttc_collided_track_ids[i]
+
+            if len(ttc_collided_track_ids):
+                ttc_token=ttc_collided_track_ids[0]
+                ttc_time_idcs = int(scorer._ttc_time_idcs[i])+1
+
+                for time_idx in range(ttc_time_idcs):
+                    if  ttc_token in scorer._observation[time_idx].tokens:
+                        key_agent_labels[i][1][time_idx] = True
+                        key_agent_corners[i][1][time_idx]=np.array(scorer._observation[time_idx][ttc_token].boundary.xy).T[:4]
+
+        theta = initial_ego_state.rear_axle.heading
+        origin_x = initial_ego_state.rear_axle.x
+        origin_y = initial_ego_state.rear_axle.y
+
+        c, s = np.cos(theta), np.sin(theta)
+        mat = np.array([[c, -s],
+                        [s, c]])
+
+        key_agent_corners[...,0]-=origin_x
+        key_agent_corners[...,1]-=origin_y
+
+        key_agent_corners=key_agent_corners.dot(mat)
 
     return scores,key_agent_corners,key_agent_labels,ego_areas

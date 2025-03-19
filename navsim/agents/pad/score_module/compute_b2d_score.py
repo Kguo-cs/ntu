@@ -290,7 +290,7 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     max_raw_progress = np.maximum(raw_progress, target_progress)
 
-    progress_distance_threshold=5
+    progress_distance_threshold=3
 
     fast_mask = max_raw_progress > progress_distance_threshold
 

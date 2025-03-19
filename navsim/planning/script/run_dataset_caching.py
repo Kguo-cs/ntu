@@ -91,7 +91,7 @@ def main(cfg: DictConfig) -> None:
         for log_file, tokens_list in scene_loader.get_tokens_list_per_log().items()
     ]
 
-    _ =worker_map(worker, cache_features, data_points)
+    _ =cache_features(data_points)#worker_map(worker, cache_features, data_points)
     logger.info(f"Finished caching {len(scene_loader)} scenarios for training/validation dataset")
 
 

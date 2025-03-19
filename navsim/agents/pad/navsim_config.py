@@ -27,7 +27,7 @@ class PadConfig:
     area_pred: bool=True
 
     proposal_num: int = 64
-    point_cloud_range = [-32, -32, 0.0, 32, 32,4.0]
+    point_cloud_range = [-32, -32, 0.0, 32, 32,8.0]
     num_points_in_pillar: int=4
 
     half_length: float= 2.588+0.25

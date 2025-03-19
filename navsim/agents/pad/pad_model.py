@@ -23,7 +23,6 @@ class PadModel(nn.Module):
 
         self._trajectory_head=nn.ModuleList([traj_refiner0]+[Traj_refiner(config) for _ in range(ref_num) ] )
 
-        self.batch_score = False
         self.scorer = Scorer(config)
 
         self.b2d=config.b2d
@@ -62,17 +61,7 @@ class PadModel(nn.Module):
         output["proposals"] = proposals
         output["proposal_list"] = proposal_list
 
-        p_size=proposals.shape[1]
-
-        if self.batch_score:
-            keyval=keyval.repeat_interleave(p_size,0)
-            image_feature=(image_feature[0].repeat_interleave(p_size,2),
-                           image_feature[1],image_feature[2],
-                           image_feature[3]['img_metas']['lidar2img'].repeat_interleave(p_size, 0)
-                           )
-            proposals = proposals.reshape(batch_size*p_size,1,8,-1).detach()[...,:3]
-        else:
-            proposals = proposals.detach()[...,:3]
+        proposals = proposals.detach()[..., :3]
 
         pred_logit,pred_logit2, pred_agents_states, pred_area_logit,bev_semantic_map,agent_states,agent_labels = self.scorer(proposals, keyval,image_feature)
 

@@ -1,7 +1,7 @@
 # Default common configs
 
 defaults:
-  #- train_test_split: navtrain
+  - train_test_split: navtrain
   # Worker that is used to run simulations
   - worker: ray_distributed_no_torch
   - _self_

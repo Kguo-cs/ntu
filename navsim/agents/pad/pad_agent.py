@@ -202,15 +202,15 @@ class PadAgent(AbstractAgent):
 
                 target_road_id = torch.unique(nearest_road_id[-1])
 
-                on_route_all = torch.isin(nearest_road_id[:-1], target_road_id)
+                on_route_all = torch.isin(nearest_road_id, target_road_id)
                 # in_multiple_lanes: if
                 # - more than one drivable polygon contains at least one corner
                 # - no polygon contains all corners
-                corner_nearest_lane_id=nearest_lane_id[:-1,:,:-1]
+                corner_nearest_lane_id=nearest_lane_id[:,:,:-1]
 
                 batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
 
-                on_road_all=on_road_all[:-1]==on_road_all[-1:]
+                # on_road_all=on_road_all[:-1]==on_road_all[-1:]
 
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
 

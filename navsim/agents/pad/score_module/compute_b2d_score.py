@@ -261,11 +261,9 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     ttc=1-ttc_collision.any(-1)
 
-    on_road_all=ego_areas[:,:,1]
-    on_route_all=ego_areas[:,:,2]
+    on_road_all=ego_areas[:-1,:,1]
+    on_route_all=ego_areas[:-1,:,2]
 
-    on_road_all=on_road_all[:-1]==on_road_all[-1:]
-    on_route_all=on_route_all[:-1]
 
     drivable_area_compliance=on_road_all.all(-1) & on_route_all.any(-1)
 

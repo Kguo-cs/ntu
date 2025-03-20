@@ -211,6 +211,7 @@ class PadAgent(AbstractAgent):
                 batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
 
                 # on_road_all=on_road_all[:-1]==on_road_all[-1:]
+                on_road_all = on_road_all == on_road_all[-1:]
 
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
 

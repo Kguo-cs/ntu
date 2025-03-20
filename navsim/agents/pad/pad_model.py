@@ -41,7 +41,7 @@ class PadModel(nn.Module):
             # print(ego_status[:,1:3])
             # print(ego_status[:,:1])
 
-            ego_status[:,1:3]=0#torch.clamp(ego_status[:,1:3], min=-1, max=1)
+            ego_status[:,1:3]=torch.clamp(ego_status[:,1:3], min=-1, max=1)
 
             # ego_status=torch.clamp(ego_status, min=-15, max=15)
             ego_status[:,:1]=torch.clamp(ego_status[:,:1], min=0, max=15)

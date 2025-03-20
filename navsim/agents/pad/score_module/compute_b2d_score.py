@@ -128,8 +128,8 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
 
     key_agent_corners = np.zeros([_num_proposals,2, 6, 4, 2])
     key_agent_labels = np.zeros([_num_proposals,2, 6],dtype=bool)
-    collision_all = np.zeros([_num_proposals,n_future])
-    ttc_collision_all = np.zeros([_num_proposals,n_future])
+    collision_all = np.zeros([_num_proposals,n_future],dtype=bool)
+    ttc_collision_all = np.zeros([_num_proposals,n_future],dtype=bool)
 
     ego_pos=_ego_coords[:,:,0].mean(-2)
     ego_vel=(_ego_coords[:,:,1,0]-_ego_coords[:,:,0,0])*2
@@ -243,7 +243,7 @@ def evaluate_coll( fut_box_corners,_ego_coords,_ego_areas):
             else:
                 temp_collided_track_ids[proposal_idx].append(token)
 
-    return collision_all,ttc_collision_all,key_agent_corners,key_agent_labels
+    return collision_all,ttc_collision_all,key_agent_corners[:-1],key_agent_labels[:-1]
 
 def get_scores(args):
 
@@ -252,6 +252,10 @@ def get_scores(args):
 def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_areas):
 
     collsions,ttc_collision,key_agent_corners,key_agent_labels=evaluate_coll(fut_box_corners,_ego_coords,ego_areas)
+
+    collsions=collsions[:-1] & (~collsions[-1:])  #collsion=True and gt_collision =False
+
+    ttc_collision=ttc_collision[:-1] & (~ttc_collision[-1:])  #collsion=True and gt_collision =False
 
     collision=1-collsions.any(-1)
 
@@ -290,7 +294,7 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     max_raw_progress = np.maximum(raw_progress, target_progress)
 
-    progress_distance_threshold=3
+    progress_distance_threshold=5
 
     fast_mask = max_raw_progress > progress_distance_threshold
 

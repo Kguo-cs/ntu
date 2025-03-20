@@ -46,7 +46,7 @@ os.environ["CHECKPOINT_ENDPOINT"]=os.environ["SAVE_PATH"]+"eval.json"
 os.environ["SCENARIO_RUNNER_ROOT"] = "scenario_runner"
 os.environ["LEADERBOARD_ROOT"] = "leaderboard"
 
-os.environ["TEAM_CONFIG"]=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/b2d_result/B2d_maxprogress_inter0/03.18_20.32/epoch=9-step=7680.ckpt"
+os.environ["TEAM_CONFIG"]=Bench2Drive_ROOT +"leaderboard/pad_team_code/pad_config.py+/home/ke/PAD/exp/b2d_result/B2d_maxacc1/03.19_21.05/epoch=20-step=16128.ckpt"
 
 from leaderboard_evaluator import main
 

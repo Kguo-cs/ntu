@@ -65,9 +65,9 @@ def main(cfg: DictConfig) -> None:
     logger.info("Num validation samples: %d", len(val_data))
 
 
-    agent._checkpoint_path = "/home/ke/PAD/exp/b2d_result/B2d_p32_prev01_inter01_w01_allw10/03.15_19.56/epoch=13-step=10752.ckpt" #"/home/ke/PAD/exp/b2d_result/B2d_prev01_inter01_l101/03.14_12.34/epoch=20-step=16128.ckpt"
+    #agent._checkpoint_path = "/home/ke/PAD/exp/b2d_result/B2d_p32_prev01_inter01_w01_allw10/03.15_19.56/epoch=13-step=10752.ckpt" #"/home/ke/PAD/exp/b2d_result/B2d_prev01_inter01_l101/03.14_12.34/epoch=20-step=16128.ckpt"
 
-    agent.initialize()
+    #agent.initialize()
 
     agent.eval()
 
@@ -94,8 +94,8 @@ def main(cfg: DictConfig) -> None:
 
         pdm_score = (torch.sigmoid(pred['pred_logit']) + torch.sigmoid(pred['pred_logit2']))[0] / 2
 
-        proposals = pred["proposals"]
-        #proposals = torch.cat([pred["trajectory"][:, None], proposals], dim=1)
+        #proposals = pred["proposals"]
+        proposals = targets["trajectory"][:, None] #torch.cat([targets["trajectory"][:, None], proposals], dim=1)
 
         metric_cache_paths = agent.test_metric_cache_paths
 
@@ -147,10 +147,6 @@ def main(cfg: DictConfig) -> None:
         global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[...,
                                      :2]
 
-        l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:, None, ..., :2], dim=-1).mean(-1)
-
-        min_indexs = torch.argsort(l2, dim=1)
-
         vel = vel[:, :-1]
 
         accs = torch.linalg.norm(vel[:, :, 1:] - vel[:, :, :-1], dim=-1) / 0.5
@@ -158,10 +154,11 @@ def main(cfg: DictConfig) -> None:
         comforts = (accs < 10).all(-1)
 
 
-        for token, town_name, min_index, comfort, dist, xy, global_conners, local_corners in zip(targets["token"],
+        for token, town_name, proposal,target_traj, comfort, dist, xy, global_conners, local_corners in zip(targets["token"],
                                                                                                targets[
                                                                                                    "town_name"],
-                                                                                               min_indexs.cpu().numpy(),
+                                                                                               proposals.cpu().numpy(),
+                                                                                               target_trajectory.cpu().numpy(),
                                                                                                comforts.cpu().numpy(),
                                                                                                dists.cpu().numpy(),
                                                                                                xys,
@@ -208,7 +205,8 @@ def main(cfg: DictConfig) -> None:
             data_dict = {
                 "fut_box_corners": metric_cache_paths[token],
                 "_ego_coords": local_corners[:-1],
-                "min_index": min_index,
+                "target_traj": target_traj,
+                "proposal": proposal,
                 "comfort": comfort,
                 "ego_areas": ego_areas.cpu().numpy(),
             }
@@ -248,12 +246,13 @@ def main(cfg: DictConfig) -> None:
            # print(torch.argmax(pdm_score,dim=0))
 
             #print(pdm_score[torch.argmax(pdm_score,dim=0)[-1]])
+            print(collision_score)
 
 
-            if not collision_score.all():
-                print(features["ego_status"][0])
-                print(pdm_score[torch.argmax(pdm_score[:,-1],dim=0)])
-                print(target_scores[0][0])
+            if not collision_score.all() :
+                # print(features["ego_status"][0])
+                # print(pdm_score[torch.argmax(pdm_score[:,-1],dim=0)])
+                # print(target_scores[0][0])
 
                 fut_box_corners = metric_cache_paths[token]
                 fut_mask = fut_box_corners.any(-1).any(-1)
@@ -297,31 +296,31 @@ def main(cfg: DictConfig) -> None:
                             )
                             ax.add_patch(polygon)
 
-                for i in range(len(global_key_agent_corners)):
-                    for t in range(6):
-                        if key_agent_labels[i][1][t]:
-                            polygon = plt.Polygon(
-                                global_key_agent_corners[i][1][t][:4],
-                                edgecolor='orange',
-                                fill=False,
-                                linewidth=2,
-                                alpha=1-t*0.15,
-                                zorder=6
-                            )
-                            ax.add_patch(polygon)
+                # for i in range(len(global_key_agent_corners)):
+                #     for t in range(6):
+                #         if key_agent_labels[i][1][t]:
+                #             polygon = plt.Polygon(
+                #                 global_key_agent_corners[i][1][t][:4],
+                #                 edgecolor='orange',
+                #                 fill=False,
+                #                 linewidth=2,
+                #                 alpha=1-t*0.15,
+                #                 zorder=6
+                #             )
+                #             ax.add_patch(polygon)
 
 
 
 
 
                 for i in range(len(global_conners)):
-                    if i==len(global_conners)-1:
+                    if i==0:
+                        color='r'
+                        zorder=10
+                    elif i==len(global_conners)-1:
                         color='b'
                         zorder=9
 
-                    elif i==0:
-                        color='r'
-                        zorder=10
                     else:
                         color='g'
                         zorder=2
@@ -331,7 +330,7 @@ def main(cfg: DictConfig) -> None:
                             edgecolor=color,  # 绿色边框
                             fill=False,
                             linewidth=2,  # 线条宽度
-                            alpha=1-t*0.15,
+                            alpha=1-t*0.1,
                             zorder=zorder
                         )
                         ax.add_patch(polygon)

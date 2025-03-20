@@ -46,7 +46,7 @@ class PadAgent(AbstractAgent):
             if self.ray:
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
-                self.worker = RayDistributedNoTorch(threads_per_node=8)
+                self.worker = RayDistributedNoTorch(threads_per_node=16)
                 self.worker_map=worker_map
 
             if config.b2d:
@@ -188,7 +188,7 @@ class PadAgent(AbstractAgent):
 
                 dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
 
-                on_road = dist_to_lane[:, :-1] < lane_width[:, None, None, None]
+                on_road = dist_to_lane < lane_width[:, None, None, None]
 
                 on_road_all = on_road.any(0).all(-1)
 
@@ -202,9 +202,7 @@ class PadAgent(AbstractAgent):
 
                 target_road_id = torch.unique(nearest_road_id[-1])
 
-                proposal_center_road_id = nearest_road_id[:-1]
-
-                on_route_all = torch.isin(proposal_center_road_id, target_road_id)
+                on_route_all = torch.isin(nearest_road_id[:-1], target_road_id)
                 # in_multiple_lanes: if
                 # - more than one drivable polygon contains at least one corner
                 # - no polygon contains all corners
@@ -212,11 +210,14 @@ class PadAgent(AbstractAgent):
 
                 batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
 
+                on_road_all=on_road_all[:-1]==on_road_all[-1:]
+
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
+
 
                 data_dict = {
                     "fut_box_corners": metric_cache_paths[token],
-                    "_ego_coords": local_corners[:-1],
+                    "_ego_coords": local_corners,
                     "target_traj": target_traj,
                     "proposal":proposal,
                     "comfort": comfort,

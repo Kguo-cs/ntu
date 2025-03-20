@@ -96,6 +96,7 @@ def main(cfg: DictConfig) -> None:
 
         #proposals = pred["proposals"]
         proposals = targets["trajectory"][:, None] #torch.cat([targets["trajectory"][:, None], proposals], dim=1)
+        #proposals=torch.cat([targets["trajectory"][:, None], proposals], dim=1)
 
         metric_cache_paths = agent.test_metric_cache_paths
 
@@ -176,7 +177,7 @@ def main(cfg: DictConfig) -> None:
 
             dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
 
-            on_road = dist_to_lane[:, :-1] < lane_width[:, None, None, None]
+            on_road = dist_to_lane < lane_width[:, None, None, None]
 
             on_road_all = on_road.any(0).all(-1)
 
@@ -190,13 +191,13 @@ def main(cfg: DictConfig) -> None:
 
             target_road_id = torch.unique(nearest_road_id[-1])
 
-            proposal_center_road_id = nearest_road_id[:-1]
+            proposal_center_road_id = nearest_road_id
 
             on_route_all = torch.isin(proposal_center_road_id, target_road_id)
             # in_multiple_lanes: if
             # - more than one drivable polygon contains at least one corner
             # - no polygon contains all corners
-            corner_nearest_lane_id = nearest_lane_id[:-1, :, :-1]
+            corner_nearest_lane_id = nearest_lane_id[:, :, :-1]
 
             batch_multiple_lanes_mask = (corner_nearest_lane_id != corner_nearest_lane_id[:, :, :1]).any(-1)
 
@@ -204,7 +205,7 @@ def main(cfg: DictConfig) -> None:
 
             data_dict = {
                 "fut_box_corners": metric_cache_paths[token],
-                "_ego_coords": local_corners[:-1],
+                "_ego_coords": local_corners,
                 "target_traj": target_traj,
                 "proposal": proposal,
                 "comfort": comfort,
@@ -242,6 +243,7 @@ def main(cfg: DictConfig) -> None:
             # if target_on_road.max()>0:
             #     print(target_on_road)
             collision_score=target_scores[0,0,0]
+            on_road=target_scores[0,0,1]
 
            # print(torch.argmax(pdm_score,dim=0))
 
@@ -249,7 +251,7 @@ def main(cfg: DictConfig) -> None:
             print(collision_score)
 
 
-            if not collision_score.all() :
+            if not on_road.all() :
                 # print(features["ego_status"][0])
                 # print(pdm_score[torch.argmax(pdm_score[:,-1],dim=0)])
                 # print(target_scores[0][0])

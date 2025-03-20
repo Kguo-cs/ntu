@@ -264,7 +264,6 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
     on_road_all=ego_areas[:-1,:,1]
     on_route_all=ego_areas[:-1,:,2]
 
-
     drivable_area_compliance=on_road_all.all(-1) & on_route_all.any(-1)
 
     ego_areas=np.stack([on_road_all,on_route_all],axis=-1)

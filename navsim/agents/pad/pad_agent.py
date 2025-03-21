@@ -47,7 +47,7 @@ class PadAgent(AbstractAgent):
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
                 if self.b2d:
-                    self.worker = RayDistributedNoTorch(threads_per_node=16)
+                    self.worker = RayDistributedNoTorch(threads_per_node=8)
                 else:
                     self.worker = RayDistributedNoTorch(threads_per_node=16)
                 self.worker_map=worker_map
@@ -135,7 +135,7 @@ class PadAgent(AbstractAgent):
             all_proposals_xy=all_proposals[:, :,:, :2]
             all_proposals_heading=all_proposals[:, :,:, 2:]
 
-            all_pos = all_proposals_xy.reshape(len(target_trajectory),-1, 2)
+            all_pos = all_proposals_xy.reshape(len(target_trajectory),-1, 2)#target_trajectory[:,:,:2]#
 
             mid_points = (all_pos.amax(1) + all_pos.amin(1)) / 2
 
@@ -193,7 +193,8 @@ class PadAgent(AbstractAgent):
 
                 lane_buffer=(dist_to_lane[:,-1]-lane_width[:,None,None]).amin(0).max()+0.01
 
-                lane_width=lane_width+max(lane_buffer,0)
+                if lane_buffer>0:
+                    lane_width=lane_width+lane_buffer
 
                 on_road = dist_to_lane < lane_width[:, None, None, None]
 
@@ -221,7 +222,6 @@ class PadAgent(AbstractAgent):
                 # on_road_all = on_road_all | ~on_road_all[-1:]# on road or groundtruth offroad
 
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
-
 
                 data_dict = {
                     "fut_box_corners": metric_cache_paths[token],

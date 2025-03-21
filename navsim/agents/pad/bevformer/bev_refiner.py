@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from torch.nn.functional import dropout
+
 from navsim.common.enums import StateSE2Index
 from .encoder import BEVFormerEncoder
 from .transformer_decoder import MyTransformeDecoder
@@ -61,6 +63,7 @@ class Bev_refiner(nn.Module):
                         type='TemporalSelfAttention',
                         embed_dims=d_model,
                         num_levels=1,
+                        dropout=config.tf_dropout,
                         my_attention=proposal_query,
                         config=config
                        ),
@@ -68,6 +71,7 @@ class Bev_refiner(nn.Module):
                         type='SpatialCrossAttention',
                         num_cams=num_cams,
                         pc_range=config.point_cloud_range,
+                        dropout=config.tf_dropout,
                         deformable_attention=dict(
                             type='MSDeformableAttention3D',
                             embed_dims=d_model,
@@ -81,11 +85,11 @@ class Bev_refiner(nn.Module):
                     embed_dims=d_model,
                     feedforward_channels=config.tf_d_ffn,
                     num_fcs=2,
-                    ffn_drop=0.,
+                    ffn_drop=config.tf_dropout,
                     act_cfg=dict(type='ReLU', inplace=True),
                 ),
                 feedforward_channels=d_ffn,
-                ffn_dropout=0,
+                ffn_dropout=config.tf_dropout,
                 operation_order=('self_attn', 'norm', 'cross_attn', 'norm',
                                  'ffn', 'norm')),
         )

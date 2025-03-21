@@ -37,7 +37,7 @@ class PadConfig:
     tf_d_ffn: int = 1024
     tf_num_layers: int = 3
     tf_num_head: int = 8
-    tf_dropout: float = 0
+    tf_dropout: float = 0.2
     num_bev_layers: int=2
     image_architecture: str = "resnet34"
 

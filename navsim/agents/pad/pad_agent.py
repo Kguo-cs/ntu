@@ -47,7 +47,7 @@ class PadAgent(AbstractAgent):
                 from navsim.planning.utils.multithreading.worker_ray_no_torch import RayDistributedNoTorch
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
                 if self.b2d:
-                    self.worker = RayDistributedNoTorch(threads_per_node=8)
+                    self.worker = RayDistributedNoTorch(threads_per_node=16)
                 else:
                     self.worker = RayDistributedNoTorch(threads_per_node=16)
                 self.worker_map=worker_map
@@ -186,10 +186,14 @@ class PadAgent(AbstractAgent):
                 nearby_point = all_lane_points[dist_to_cur < dist]
 
                 lane_xy = nearby_point[:, :2]
-                lane_width = nearby_point[:, 2]+0.1
+                lane_width = nearby_point[:, 2]
                 lane_id = nearby_point[:, -1]
 
                 dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
+
+                lane_buffer=(dist_to_lane[:,-1]-lane_width[:,None,None]).amin(0).max()+0.01
+
+                lane_width=lane_width+max(lane_buffer,0)
 
                 on_road = dist_to_lane < lane_width[:, None, None, None]
 
@@ -214,7 +218,7 @@ class PadAgent(AbstractAgent):
                 batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
 
                 # on_road_all=on_road_all[:-1]==on_road_all[-1:]
-                on_road_all = on_road_all | ~on_road_all[-1:]# on road or groundtruth offroad
+                # on_road_all = on_road_all | ~on_road_all[-1:]# on road or groundtruth offroad
 
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)
 

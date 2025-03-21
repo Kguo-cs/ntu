@@ -39,7 +39,7 @@ class SpatialCrossAttention(BaseModule):
                  embed_dims=256,
                  num_cams=8,
                  pc_range=None,
-                 dropout=0.1,
+                 dropout=0,
                  init_cfg=None,
                  batch_first=False,
                  deformable_attention=dict(
@@ -237,7 +237,7 @@ class MSDeformableAttention3D(BaseModule):
                  num_levels=4,
                  num_points=8,
                  im2col_step=64,
-                 dropout=0.1,
+                 dropout=0,
                  batch_first=True,
                  norm_cfg=None,
                  init_cfg=None):

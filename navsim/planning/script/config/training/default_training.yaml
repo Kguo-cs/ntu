@@ -17,7 +17,7 @@ defaults:
 split: trainval
 cache_path: ${oc.env:NAVSIM_EXP_ROOT}/navsim_cache
 use_cache_without_dataset: true # load the training samples from the cache. scene-filter will be ignored
-force_cache_computation: true
+force_cache_computation: false
 experiment_name: pad
 seed: 0 
 

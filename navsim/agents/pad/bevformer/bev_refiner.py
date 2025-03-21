@@ -85,7 +85,7 @@ class Bev_refiner(nn.Module):
                     act_cfg=dict(type='ReLU', inplace=True),
                 ),
                 feedforward_channels=d_ffn,
-                ffn_dropout=0.1,
+                ffn_dropout=0,
                 operation_order=('self_attn', 'norm', 'cross_attn', 'norm',
                                  'ffn', 'norm')),
         )

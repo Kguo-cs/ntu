@@ -53,7 +53,7 @@ class TemporalSelfAttention(BaseModule):
                  num_points=4,
                  num_bev_queue=2,
                  im2col_step=64,
-                 dropout=0.1,
+                 dropout=0,
                  batch_first=True,
                  norm_cfg=None,
                  init_cfg=None,

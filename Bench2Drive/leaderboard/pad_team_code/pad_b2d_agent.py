@@ -98,8 +98,8 @@ class padAgent(autonomous_agent.AutonomousAgent):
             string += self.save_name
             self.save_path = pathlib.Path(os.environ['SAVE_PATH']) / string
             self.save_path.mkdir(parents=True, exist_ok=False)
-            (self.save_path / 'meta').mkdir()
             if 'vis' in TEAM_AGENT:
+                (self.save_path / 'meta').mkdir()
                 (self.save_path / 'rgb_front').mkdir()
                 # (self.save_path / 'rgb_front_right').mkdir()
                 # (self.save_path / 'rgb_front_left').mkdir()
@@ -504,9 +504,9 @@ class padAgent(autonomous_agent.AutonomousAgent):
         #     self.save_path / 'rgb_back_right' / ('%04d.png' % frame))
         #Image.fromarray(tick_data['bev']).save(self.save_path / 'bev' / ('%04d.png' % frame))
 
-        outfile = open(self.save_path / 'meta' / ('%04d.json' % frame), 'w')
-        json.dump(self.pid_metadata, outfile, indent=4)
-        outfile.close()
+        # outfile = open(self.save_path / 'meta' / ('%04d.json' % frame), 'w')
+        # json.dump(self.pid_metadata, outfile, indent=4)
+        # outfile.close()
 
         # metric info
         outfile = open(self.save_path / 'metric_info.json', 'w')

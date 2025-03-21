@@ -27,13 +27,13 @@ class PadConfig:
     area_pred: bool=True
 
     proposal_num: int = 64
-    point_cloud_range = [-32, -32, 0.0, 32, 32,8.0]
+    point_cloud_range = [-32, -32, -2.0, 32, 32, 6.0]
     num_points_in_pillar: int=4
 
     half_length: float= 2.588+0.25
     half_width: float =1.1485+0.1
     rear_axle_to_center: float = 1.461
-    lidar_height: float = 1.777 #-0.2
+    lidar_height: float = 0 #-0.2
 
     num_poses: int=8
     num_agent_pose: int=41
@@ -44,7 +44,7 @@ class PadConfig:
     tf_d_ffn: int = 2048
     tf_num_layers: int = 3
     tf_num_head: int = 8
-    tf_dropout: float = 0.1
+    tf_dropout: float = 0
     num_bev_layers: int=2
     image_architecture: str = "resnet34"
 

@@ -1,6 +1,6 @@
 import torch.nn as nn
 from .bevformer.bev_refiner import Bev_refiner
-from .bevformer.transformer_decoder import MyTransformeDecoder
+from .bevformer.transformer_decoder import MyTransformeDecoder,MLP
 import numpy as np
 
 class Traj_refiner(nn.Module):
@@ -13,7 +13,6 @@ class Traj_refiner(nn.Module):
 
         self.traj_bev = config.traj_bev
         self.b2d = config.b2d
-
 
         if init_p:
             input_dim=config.proposal_num
@@ -28,13 +27,9 @@ class Traj_refiner(nn.Module):
             self.init_p=init_p
 
             if self.init_p:
-                self.init_feature= nn.Embedding(input_dim, config.tf_d_model)
+                self.init_feature= nn.Embedding(self.poses_num*config.proposal_num, config.tf_d_model)
 
-            self.traj_decoder=nn.Sequential(
-                nn.Linear(config.tf_d_model, config.tf_d_ffn),
-                nn.ReLU(),
-                nn.Linear(config.tf_d_ffn, output_dim),
-            )
+            self.traj_decoder=MLP(config.tf_d_model,config.tf_d_ffn,self.state_size)
         else:
            self.traj_decoder=MyTransformeDecoder(config,input_dim,output_dim,trajenc=not init_p)
 
@@ -50,7 +45,7 @@ class Traj_refiner(nn.Module):
 
         if self.traj_mlp:
             if len(proposal_list):
-                proposal_feature=keyval[:,:proposals.shape[1]]
+                proposal_feature=keyval[:,:proposals.shape[1]*proposals.shape[2]]
             else:
                 proposal_feature=keyval+self.init_feature.weight[None]
 

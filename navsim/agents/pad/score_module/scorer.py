@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from ..bevformer.bev_refiner import Bev_refiner
-from ..bevformer.transformer_decoder import MyTransformeDecoder
+from ..bevformer.transformer_decoder import MyTransformeDecoder,MLP
 from .map_head import MapHead
 import numpy as np
 
@@ -22,14 +22,22 @@ class Scorer(nn.Module):
         if self.score_bev:
             self.Bev_refiner=Bev_refiner(config,self.proposal_num,num_poses,proposal_query=config.score_proposal_query)
 
-        input_dim=state_size* num_poses 
+        input_dim=state_size* num_poses
 
-        self.pred_score = MyTransformeDecoder(config,input_dim,self.score_num )
+        self.score_mlp=False
+
+        if self.score_mlp:
+            self.pred_score = MLP(config.tf_d_model,config.tf_d_ffn,self.score_num)
+        else:
+            self.pred_score = MyTransformeDecoder(config,input_dim,self.score_num )
 
         self.double_score=config.double_score
 
         if self.double_score:
-            self.pred_score2 = MyTransformeDecoder(config, input_dim, self.score_num)
+            if self.score_mlp:
+                self.pred_score2 = MLP(config.tf_d_model, config.tf_d_ffn, self.score_num)
+            else:
+                self.pred_score2 = MyTransformeDecoder(config, input_dim, self.score_num)
 
         self.agent_pred= config.agent_pred
 
@@ -78,7 +86,10 @@ class Scorer(nn.Module):
 
         trajectory = proposals.reshape(batch_size,p_size, -1)
 
-        pred_logit=self.pred_score(trajectory,keyval).reshape(batch_size, -1, 6)
+        if self.score_mlp:
+            pred_logit=self.traj_decoder(proposal_feature).reshape(keyval.shape[0],-1,self.poses_num,self.state_size)
+        else:
+            pred_logit=self.pred_score(trajectory,keyval).reshape(batch_size, -1, 6)
 
         pred_logit2=pred_agents_states=pred_area_logit=bev_semantic_map=agent_states=agent_labels=None
 

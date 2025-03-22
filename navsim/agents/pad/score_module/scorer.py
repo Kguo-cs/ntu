@@ -24,7 +24,7 @@ class Scorer(nn.Module):
 
         input_dim=state_size* num_poses
 
-        self.score_mlp=False
+        self.score_mlp=True
 
         if self.score_mlp:
             self.pred_score = MLP(config.tf_d_model,config.tf_d_ffn,self.score_num)
@@ -43,9 +43,15 @@ class Scorer(nn.Module):
 
         num_agent_pose=config.num_agent_pose
 
+        self.agent_mlp=True
+
         if self.agent_pred:
-            self.pred_col_agent = MyTransformeDecoder(config, input_dim, num_agent_pose * 9)
-            self.pred_ttc_agent = MyTransformeDecoder(config, input_dim, num_agent_pose * 9)
+            if self.agent_mlp:
+                self.pred_col_agent = MLP(config.tf_d_model, config.tf_d_ffn, num_agent_pose * 9)
+                self.pred_ttc_agent = MLP(config.tf_d_model, config.tf_d_ffn, num_agent_pose * 9)
+            else:
+                self.pred_col_agent = MyTransformeDecoder(config, input_dim, num_agent_pose * 9)
+                self.pred_ttc_agent = MyTransformeDecoder(config, input_dim, num_agent_pose * 9)
 
         self.area_pred=config.area_pred
 
@@ -87,14 +93,18 @@ class Scorer(nn.Module):
         trajectory = proposals.reshape(batch_size,p_size, -1)
 
         if self.score_mlp:
-            pred_logit=self.traj_decoder(proposal_feature).reshape(keyval.shape[0],-1,self.poses_num,self.state_size)
+            proposal_feature = keyval[:, :p_size * t_size].reshape(batch_size,p_size,t_size,-1).amax(-2)
+            pred_logit=self.pred_score(proposal_feature).reshape(batch_size, -1, 6)
         else:
             pred_logit=self.pred_score(trajectory,keyval).reshape(batch_size, -1, 6)
 
         pred_logit2=pred_agents_states=pred_area_logit=bev_semantic_map=agent_states=agent_labels=None
 
         if self.double_score:
-            pred_logit2 = self.pred_score2(trajectory, keyval).reshape(batch_size, -1, 6)
+            if self.score_mlp:
+                pred_logit2 = self.pred_score2(proposal_feature).reshape(batch_size, -1, 6)
+            else:
+                pred_logit2 = self.pred_score2(trajectory, keyval).reshape(batch_size, -1, 6)
 
         if  self.training:
             if self.bev_map:
@@ -109,8 +119,12 @@ class Scorer(nn.Module):
                 pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
 
             if self.agent_pred:
-                col_agents_state = self.pred_col_agent(trajectory, keyval)
-                ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
+                if self.agent_mlp:
+                    col_agents_state=self.pred_col_agent(proposal_feature)
+                    ttc_agents_state=self.pred_ttc_agent(proposal_feature)
+                else:
+                    col_agents_state = self.pred_col_agent(trajectory, keyval)
+                    ttc_agents_state = self.pred_ttc_agent(trajectory, keyval)
                 pred_agents_states = torch.stack([ttc_agents_state, col_agents_state], dim=2)
 
         return pred_logit,pred_logit2, pred_agents_states, pred_area_logit,bev_semantic_map,agent_states,agent_labels

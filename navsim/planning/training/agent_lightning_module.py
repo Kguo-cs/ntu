@@ -64,12 +64,11 @@ class AgentLightningModule(pl.LightningModule):
             features, targets = batch
             # score,best_score=self.agent.inference(features, targets)
             predictions = self.agent.forward(features)
-            trajectory=predictions["trajectory"][:,None]
-            final_score,best_score,proposal_scores,l2,trajectoy_scores=self.agent.compute_score(targets,trajectory)
+            all_res=torch.cat([predictions["trajectory"][:,None],predictions["proposals"]],dim=1)
+            final_score,best_score,proposal_scores,l2,trajectoy_scores=self.agent.compute_score(targets,all_res)
             mean_score=proposal_scores.mean()
             pdm_score=predictions["pdm_score"]
-            target_pdm_score=pdm_score[torch.arange(len(pdm_score)), torch.argmax(pdm_score, dim=1)]
-            score_error=torch.abs(target_pdm_score - proposal_scores).mean()
+            score_error=torch.abs(pdm_score - proposal_scores).mean()
             logging_prefix="val"
             self.log(f"{logging_prefix}/score", final_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
             self.log(f"{logging_prefix}/best_score", best_score, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)

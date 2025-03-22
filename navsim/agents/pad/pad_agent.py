@@ -48,6 +48,7 @@ class PadAgent(AbstractAgent):
                 from nuplan.planning.utils.multithreading.worker_utils import worker_map
                 if self.b2d:
                     self.worker = RayDistributedNoTorch(threads_per_node=8)
+
                 else:
                     self.worker = RayDistributedNoTorch(threads_per_node=16)
                 self.worker_map=worker_map
@@ -115,8 +116,6 @@ class PadAgent(AbstractAgent):
         return self._pad_model(features)
 
     def compute_score(self, targets, proposals, test=True):
-
-
         if self.training:
             metric_cache_paths = self.train_metric_cache_paths
         else:
@@ -256,7 +255,7 @@ class PadAgent(AbstractAgent):
         if test:
             l2_2s = torch.linalg.norm(proposals[:, 0] - target_trajectory, dim=-1)[:, :4]
 
-            return final_scores[:, 0].mean(), best_scores.mean(), final_scores[:, 0], l2_2s.mean(), target_scores[:, 0]
+            return final_scores[:, 0].mean(), best_scores.mean(), final_scores[:, 1:], l2_2s.mean(), target_scores[:, 0]
         else:
             key_agent_corners = torch.FloatTensor(np.stack([res[1] for res in all_res])).to(proposals.device)
 

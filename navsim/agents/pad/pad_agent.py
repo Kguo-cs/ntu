@@ -97,9 +97,9 @@ class PadAgent(AbstractAgent):
         return SensorConfig(
             cam_f0=[3],
             cam_l0=[3],
-            cam_l1=[3],
+            cam_l1=[],
             cam_l2=[],
-            cam_r0=[],
+            cam_r0=[3],
             cam_r1=[],
             cam_r2=[],
             cam_b0=[3],

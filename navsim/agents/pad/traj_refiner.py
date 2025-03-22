@@ -21,15 +21,15 @@ class Traj_refiner(nn.Module):
             if self.traj_bev:
                 self.Bev_refiner=Bev_refiner(config,config.proposal_num,self.poses_num,config.traj_proposal_query)
 
-        self.traj_mlp=False
+        self.traj_mlp=True
 
         if self.traj_mlp:
             self.init_p=init_p
 
             if self.init_p:
-                self.init_feature= nn.Embedding(self.poses_num*config.proposal_num, config.tf_d_model)
+                self.init_feature= nn.Embedding(config.proposal_num, config.tf_d_model)
 
-            self.traj_decoder=MLP(config.tf_d_model,config.tf_d_ffn,self.state_size)
+            self.traj_decoder=MLP(config.tf_d_model,config.tf_d_ffn,self.poses_num*self.state_size)
         else:
            self.traj_decoder=MyTransformeDecoder(config,input_dim,output_dim,trajenc=not init_p)
 
@@ -45,7 +45,7 @@ class Traj_refiner(nn.Module):
 
         if self.traj_mlp:
             if len(proposal_list):
-                proposal_feature=keyval[:,:proposals.shape[1]*proposals.shape[2]]
+                proposal_feature=keyval[:,:proposals.shape[1]*proposals.shape[2]].reshape(proposals.shape[0],proposals.shape[1],proposals.shape[2],-1).amax(-2)
             else:
                 proposal_feature=keyval+self.init_feature.weight[None]
 

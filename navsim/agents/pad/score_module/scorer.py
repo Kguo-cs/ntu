@@ -56,21 +56,10 @@ class Scorer(nn.Module):
         self.area_pred=config.area_pred
 
         if self.area_pred:
-            d_ffn = config.tf_d_ffn
-            d_model = config.tf_d_model
-
             if self.b2d:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,2),
-                )
+                self.pred_area = MLP(config.tf_d_model, config.tf_d_ffn, 2)
             else:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,5*3),
-                )
+                self.pred_area = MLP(config.tf_d_model, config.tf_d_ffn, 5*3)
 
         self.bev_map=config.bev_map
         self.bev_agent=config.bev_agent

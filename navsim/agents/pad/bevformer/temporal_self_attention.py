@@ -9,7 +9,7 @@ import math
 from mmcv.runner.base_module import BaseModule, ModuleList, Sequential
 from mmcv.utils import (ConfigDict, build_from_cfg, deprecated_api_warning,
                         to_2tuple)
-from .transformer_decoder import MyTransformeDecoder
+from .transformer_decoder import MyTransformeDecoder,MLP
 
 from mmcv.utils import ext_loader
 ext_module = ext_loader.load_ext(
@@ -100,14 +100,27 @@ class TemporalSelfAttention(BaseModule):
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            decoder_layer = nn.TransformerDecoderLayer(
-                d_model=d_model,
-                nhead=config.tf_num_head,
-                dim_feedforward=d_ffn,
-                dropout=config.tf_dropout,
-                batch_first=True,
-            )
-            self.prev_decoder = nn.TransformerDecoder(decoder_layer, 1)
+            self.prev_mlp=True
+
+            if self.prev_mlp:
+                decoder_layer = nn.TransformerEncoderLayer(
+                    d_model=d_model,
+                    nhead=config.tf_num_head,
+                    dim_feedforward=d_ffn,
+                    dropout=config.tf_dropout,
+                    batch_first=True,
+                )
+                self.prev_decoder = nn.TransformerEncoder(decoder_layer, 1)
+
+            else:
+                decoder_layer = nn.TransformerDecoderLayer(
+                    d_model=d_model,
+                    nhead=config.tf_num_head,
+                    dim_feedforward=d_ffn,
+                    dropout=config.tf_dropout,
+                    batch_first=True,
+                )
+                self.prev_decoder = nn.TransformerDecoder(decoder_layer, 1)
         else:
             self.sampling_offsets = nn.Linear(
                 embed_dims * self.num_bev_queue, num_bev_queue * num_heads * num_levels * num_points * 2)
@@ -194,7 +207,13 @@ class TemporalSelfAttention(BaseModule):
 
             prev_bev=kwargs['img_metas']["prev_bev"]
 
-            query=self.prev_decoder(query,prev_bev)
+            if self.prev_mlp:
+
+                query=query+prev_bev[:,:query.shape[1]]
+
+                query=self.prev_decoder(query)
+            else:
+                query=self.prev_decoder(query,prev_bev)
 
             return query
 

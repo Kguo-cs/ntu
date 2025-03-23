@@ -275,11 +275,12 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     l2_score=l2-100*multiplicate_metric_scores
 
-    min_index=np.argmin(l2_score)
+    sort_score=np.sort(l2_score)
 
     progress =np.zeros([len(proposals)])
 
-    progress[min_index]=1
+    progress[sort_score[0]==l2_score]=1
+    progress[sort_score[1]==l2_score]=1
 
     # target_line=np.concatenate([np.zeros([1,2]),target_traj[...,:2]])
     #

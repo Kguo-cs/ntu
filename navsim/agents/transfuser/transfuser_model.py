@@ -150,8 +150,8 @@ class AgentHead(nn.Module):
         """Torch module forward pass."""
 
         agent_states = self._mlp_states(agent_queries)
-        agent_states[..., BoundingBox2DIndex.POINT] = agent_states[..., BoundingBox2DIndex.POINT].tanh() * 32
-        agent_states[..., BoundingBox2DIndex.HEADING] = agent_states[..., BoundingBox2DIndex.HEADING].tanh() * np.pi
+        agent_states[..., slice(0, 2)] = agent_states[..., slice(0, 2)].tanh() * 32
+        agent_states[..., 2] = agent_states[..., 2].tanh() * np.pi
 
         agent_labels = self._mlp_label(agent_queries).squeeze(dim=-1)
 

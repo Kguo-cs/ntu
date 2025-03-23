@@ -100,7 +100,7 @@ class TemporalSelfAttention(BaseModule):
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            self.prev_mlp=True
+            self.prev_mlp=False
 
             if self.prev_mlp:
                 decoder_layer = nn.TransformerEncoderLayer(

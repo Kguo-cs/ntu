@@ -11,10 +11,10 @@ from nuplan.common.maps.abstract_map import SemanticMapLayer
 class PadConfig:
     b2d: bool = False
 
-    ref_num: int=1
+    ref_num: int=0
 
-    traj_bev: bool=True
-    score_bev: bool=True
+    traj_bev: bool=False
+    score_bev: bool=False
 
     traj_proposal_query: bool=True
     score_proposal_query: bool=True

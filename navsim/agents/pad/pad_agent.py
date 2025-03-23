@@ -102,8 +102,8 @@ class PadAgent(AbstractAgent):
             cam_r0=[3],
             cam_r1=[],
             cam_r2=[],
-            cam_b0=[3],
-            lidar_pc=[],
+            cam_b0=[],
+            lidar_pc=[3],
         )
     
     def get_target_builders(self) :

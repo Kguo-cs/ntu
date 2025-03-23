@@ -24,7 +24,7 @@ class Scorer(nn.Module):
 
         input_dim=state_size* num_poses
 
-        self.score_mlp=True
+        self.score_mlp=False
 
         if self.score_mlp:
             self.pred_score = MLP(config.tf_d_model,config.tf_d_ffn,self.score_num)
@@ -43,7 +43,7 @@ class Scorer(nn.Module):
 
         num_agent_pose=config.num_agent_pose
 
-        self.agent_mlp=True
+        self.agent_mlp=False
 
         if self.agent_pred:
             if self.agent_mlp:
@@ -55,22 +55,29 @@ class Scorer(nn.Module):
 
         self.area_pred=config.area_pred
 
+        self.area_mlp=False
+
         if self.area_pred:
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            if self.b2d:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,2),
-                )
+            if self.area_mlp:
+
+                if self.b2d:
+                    self.pred_area = nn.Sequential(
+                        nn.Linear(d_model, d_ffn),
+                        nn.ReLU(),
+                        nn.Linear(d_ffn,2),
+                    )
+                else:
+                    self.pred_area = nn.Sequential(
+                        nn.Linear(d_model, d_ffn),
+                        nn.ReLU(),
+                        nn.Linear(d_ffn,5*3),
+                    )
             else:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,5*3),
-                )
+                self.pred_area = MyTransformeDecoder(config, input_dim, 40*3)
+
 
         self.bev_map=config.bev_map
         self.bev_agent=config.bev_agent
@@ -116,7 +123,10 @@ class Scorer(nn.Module):
                 agent_labels = agents[:, :, -1]
 
             if self.area_pred:
-                pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
+                if self.area_mlp:
+                    pred_area_logit = self.pred_area(keyval[:, :p_size * t_size])
+                else:
+                    pred_area_logit =self.pred_area(trajectory, keyval)
 
             if self.agent_pred:
                 if self.agent_mlp:

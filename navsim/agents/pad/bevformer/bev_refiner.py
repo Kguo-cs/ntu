@@ -4,7 +4,6 @@ from torch.nn.functional import dropout
 
 from navsim.common.enums import StateSE2Index
 from .encoder import BEVFormerEncoder
-from .transformer_decoder import MyTransformeDecoder
 from mmdet.models.utils.positional_encoding import LearnedPositionalEncoding
 from .decoder import CustomMSDeformableAttention
 from .temporal_self_attention import TemporalSelfAttention

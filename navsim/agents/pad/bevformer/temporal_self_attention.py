@@ -9,7 +9,6 @@ import math
 from mmcv.runner.base_module import BaseModule, ModuleList, Sequential
 from mmcv.utils import (ConfigDict, build_from_cfg, deprecated_api_warning,
                         to_2tuple)
-from .transformer_decoder import MyTransformeDecoder,MLP
 
 from mmcv.utils import ext_loader
 ext_module = ext_loader.load_ext(
@@ -100,7 +99,7 @@ class TemporalSelfAttention(BaseModule):
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            self.prev_mlp=True
+            self.prev_mlp=False
 
             if self.prev_mlp:
                 decoder_layer = nn.TransformerEncoderLayer(

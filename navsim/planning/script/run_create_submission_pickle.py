@@ -70,7 +70,7 @@ def run_test_evaluation(
         feature_list.append(features)
         token_list.append(token)            
 
-        if len(feature_list)==32 or (len(output)>=len(input_loader)//32*32):
+        if len(feature_list)==64 or (len(output)>=len(input_loader)//64*64):
             features=default_collate(feature_list)
 
             features={key:value.cuda() for key,value in features.items()}

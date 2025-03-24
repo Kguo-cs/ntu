@@ -1,4 +1,5 @@
 import os
+import random
 from typing import Tuple
 from pathlib import Path
 import logging
@@ -100,7 +101,11 @@ def main(cfg: DictConfig) -> None:
         agent=agent,
     )
 
+    train=np.load(os.getenv("OPENSCENE_DATA_ROOT")+"/train_logs.npy")
     val=np.load(os.getenv("OPENSCENE_DATA_ROOT")+"/test_logs.npy")
+
+    #train=random.sample(list(train), k=int(len(train)*1))
+
     if cfg.use_cache_without_dataset:
         logger.info("Using cached data without building SceneLoader")
         assert (
@@ -113,7 +118,7 @@ def main(cfg: DictConfig) -> None:
             cache_path=cfg.cache_path,
             feature_builders=agent.get_feature_builders(),
             target_builders=agent.get_target_builders(),
-            log_names=np.load(os.getenv("OPENSCENE_DATA_ROOT")+"/train_logs.npy")#cfg.train_logs,
+            log_names=train#cfg.train_logs,
         )
         val_data = CacheOnlyDataset(
             cache_path=cfg.cache_path,

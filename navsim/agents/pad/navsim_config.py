@@ -23,8 +23,8 @@ class PadConfig:
     bev_agent: bool=False
 
     double_score: bool=True
-    agent_pred: bool=False
-    area_pred: bool=False
+    agent_pred: bool=True
+    area_pred: bool=True
 
     proposal_num: int = 64
     point_cloud_range = [-32, -32, -2.0, 32, 32, 6.0]

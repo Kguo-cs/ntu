@@ -24,7 +24,7 @@ class Scorer(nn.Module):
 
         input_dim=state_size* num_poses
 
-        self.score_mlp=True
+        self.score_mlp=False
 
         if self.score_mlp:
             self.pred_score = MLP(config.tf_d_model,config.tf_d_ffn,self.score_num)
@@ -43,7 +43,7 @@ class Scorer(nn.Module):
 
         num_agent_pose=config.num_agent_pose
 
-        self.agent_mlp=True
+        self.agent_mlp=False
 
         if self.agent_pred:
             if self.agent_mlp:

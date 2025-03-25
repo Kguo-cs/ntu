@@ -55,7 +55,7 @@ class PadConfig:
     final_score_weight: int = 1
     pred_ce_weight: int = 1
     pred_l1_weight: int = 0.1
-    pred_area_weight: int = 1
+    pred_area_weight: int = 2
     prev_weight: int = 0.1
     agent_class_weight: float = 1.0
     agent_box_weight: float = 0.1

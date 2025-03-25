@@ -21,7 +21,7 @@ class Traj_refiner(nn.Module):
             if self.traj_bev:
                 self.Bev_refiner=Bev_refiner(config,config.proposal_num,self.poses_num,config.traj_proposal_query)
 
-        self.traj_mlp=False
+        self.traj_mlp=True
 
         if self.traj_mlp:
             self.init_p=init_p

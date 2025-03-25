@@ -13,5 +13,5 @@ config:
 
   latent: False
 
-checkpoint_path: ''
+checkpoint_path: '/home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/pad_mlp3_area2/03.24_14.00/lightning_logs/version_0/checkpoints/epoch=12-step=8632.ckpt'
 lr: 1e-4

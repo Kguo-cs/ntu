@@ -24,7 +24,7 @@ class Scorer(nn.Module):
 
         input_dim=state_size* num_poses
 
-        self.score_mlp=False
+        self.score_mlp=True
 
         if self.score_mlp:
             self.pred_score = MLP(config.tf_d_model,config.tf_d_ffn,self.score_num)
@@ -43,7 +43,7 @@ class Scorer(nn.Module):
 
         num_agent_pose=config.num_agent_pose
 
-        self.agent_mlp=False
+        self.agent_mlp=True
 
         if self.agent_pred:
             if self.agent_mlp:
@@ -60,17 +60,9 @@ class Scorer(nn.Module):
             d_model = config.tf_d_model
 
             if self.b2d:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,2),
-                )
+                self.pred_area = MLP(config.tf_d_model, config.tf_d_ffn, 2)
             else:
-                self.pred_area = nn.Sequential(
-                    nn.Linear(d_model, d_ffn),
-                    nn.ReLU(),
-                    nn.Linear(d_ffn,5*3),
-                )
+                self.pred_area = MLP(config.tf_d_model, config.tf_d_ffn, 5*3)
 
         self.bev_map=config.bev_map
         self.bev_agent=config.bev_agent

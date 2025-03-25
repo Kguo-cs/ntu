@@ -268,49 +268,44 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     ego_areas=np.stack([on_road_all,on_route_all],axis=-1)
 
-    l2 = np.linalg.norm(proposals[:,:, :2] - target_traj[None, : ,:2], axis=-1).mean(-1)
+    #l2 = np.linalg.norm(proposals[:,:, :2] - target_traj[None, : ,:2], axis=-1).mean(-1)
 
+    # l2_score=l2-100*multiplicate_metric_scores
+    #
+    # sort_score=np.sort(l2_score)
+    #
+    # progress =np.zeros([len(proposals)])
+    #
+    # progress[sort_score[0]==l2_score]=1
+    # progress[sort_score[1]==l2_score]=1
+
+    target_line=np.concatenate([np.zeros([1,2]),target_traj[...,:2]])
+
+    centerline=linestrings(target_line)
+
+    target_progress = centerline.project(Point(target_line[-1]))
+
+    raw_progress = np.ones([len(proposals)])
+
+    for proposal_idx,proposal in enumerate(proposals[...,:2]):
+        end_point = Point(proposal[-1])
+        raw_progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
+
+    raw_progress = np.clip(raw_progress, a_min=0, a_max=None)
 
     multiplicate_metric_scores=collision*drivable_area_compliance
+    raw_progress=multiplicate_metric_scores*raw_progress
 
-    l2_score=l2-100*multiplicate_metric_scores
+    max_raw_progress = np.maximum(raw_progress, target_progress)
 
-    sort_score=np.sort(l2_score)
+    progress_distance_threshold=5
 
-    progress =np.zeros([len(proposals)])
+    fast_mask = max_raw_progress > progress_distance_threshold
 
-    progress[sort_score[0]==l2_score]=1
-    progress[sort_score[1]==l2_score]=1
+    progress = np.ones([len(raw_progress)], dtype=np.float64)
 
-    # target_line=np.concatenate([np.zeros([1,2]),target_traj[...,:2]])
-    #
-    # centerline=linestrings(target_line)
-    #
-    # target_progress = centerline.project(Point(target_line[-1]))
-    #
-    # raw_progress = np.ones([len(proposals)])
-    #
-    # # if target_progress != 0:
-    # for proposal_idx,proposal in enumerate(proposals[...,:2]):
-    #     # start_point = Point(proposal[0])
-    #     end_point = Point(proposal[-1])
-    #     raw_progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
-    #
-    # raw_progress = np.clip(raw_progress, a_min=0, a_max=None)
-    #
-    # multiplicate_metric_scores=collision*drivable_area_compliance
-    # raw_progress=multiplicate_metric_scores*raw_progress
-    #
-    # max_raw_progress = np.maximum(raw_progress, target_progress)
-    #
-    # progress_distance_threshold=5
-    #
-    # fast_mask = max_raw_progress > progress_distance_threshold
-    #
-    # normalized_progress = np.ones([len(raw_progress)], dtype=np.float64)
-    #
-    # normalized_progress[fast_mask] = raw_progress[fast_mask] / max_raw_progress[fast_mask]
-    # normalized_progress[(~fast_mask) & (multiplicate_metric_scores == 0)] = 0
+    progress[fast_mask] = raw_progress[fast_mask] / max_raw_progress[fast_mask]
+    progress[~fast_mask] = multiplicate_metric_scores[~fast_mask]
 
     # proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
     #

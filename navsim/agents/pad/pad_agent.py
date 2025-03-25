@@ -162,10 +162,6 @@ class PadAgent(AbstractAgent):
 
             global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[..., :2]
 
-            # l2 = torch.linalg.norm(proposals[..., :2] - target_trajectory[:,None, ..., :2], dim=-1).mean(-1)
-
-            #min_indexs = torch.argmin(l2, dim=1)
-
             vel=vel[:,:-1]
 
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
@@ -190,11 +186,6 @@ class PadAgent(AbstractAgent):
 
                 dist_to_lane = torch.linalg.norm(global_conners[None] - lane_xy[:, None, None, None], dim=-1)
 
-                lane_buffer=(dist_to_lane[:,-1]-lane_width[:,None,None]).amin(0).max()+0.01
-
-                if lane_buffer>0:
-                    lane_width=lane_width+lane_buffer
-
                 on_road = dist_to_lane < lane_width[:, None, None, None]
 
                 on_road_all = on_road.any(0).all(-1)
@@ -217,7 +208,7 @@ class PadAgent(AbstractAgent):
 
                 batch_multiple_lanes_mask = (corner_nearest_lane_id!=corner_nearest_lane_id[:,:,:1]).any(-1)
 
-                # on_road_all=on_road_all[:-1]==on_road_all[-1:]
+                on_road_all=on_road_all==on_road_all[-1:]
                 # on_road_all = on_road_all | ~on_road_all[-1:]# on road or groundtruth offroad
 
                 ego_areas=torch.stack([batch_multiple_lanes_mask,on_road_all,on_route_all],dim=-1)

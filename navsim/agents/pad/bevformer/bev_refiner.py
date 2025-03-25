@@ -1,8 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.nn.functional import dropout
-
-from navsim.common.enums import StateSE2Index
 from .encoder import BEVFormerEncoder
 from mmdet.models.utils.positional_encoding import LearnedPositionalEncoding
 from .decoder import CustomMSDeformableAttention
@@ -63,7 +60,7 @@ class Bev_refiner(nn.Module):
                         embed_dims=d_model,
                         num_levels=1,
                         dropout=config.tf_dropout,
-                        my_attention=proposal_query,
+                        proposal_query=proposal_query,
                         config=config
                        ),
                     dict(

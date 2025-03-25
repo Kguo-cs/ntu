@@ -60,56 +60,46 @@ class PadFeatureBuilder(AbstractFeatureBuilder):
 
     def _get_lidar_feature(self, agent_input: AgentInput) -> torch.Tensor:
         """
-        Compute LiDAR feature as 2D histogram, according to Pad
+        Compute LiDAR feature as 2D histogram, according to Transfuser
         :param agent_input: input dataclass
         :return: LiDAR histogram as torch tensors
         """
 
         # only consider (x,y,z) & swap axes for (N,3) numpy array
-        features_list=[]
-        for lidar in agent_input.lidars:
-            if lidar.lidar_pc is None:
-                continue
-            #lidar_pc = agent_input.lidars[-1].lidar_pc[LidarIndex.POSITION].T
-            lidar_pc = lidar.lidar_pc[slice(0, 2 + 1)].T
+        lidar_pc = agent_input.lidars[-1].lidar_pc[LidarIndex.POSITION].T
 
-            # NOTE: Code from
-            # https://github.com/autonomousvision/carla_garage/blob/main/team_code/data.py#L873
-            def splat_points(point_cloud):
-                # 256 x 256 grid
-                xbins = np.linspace(
-                    self._config.lidar_min_x,
-                    self._config.lidar_max_x,
-                    (self._config.lidar_max_x - self._config.lidar_min_x)
-                    * int(self._config.pixels_per_meter)
-                    + 1,
-                )
-                ybins = np.linspace(
-                    self._config.lidar_min_y,
-                    self._config.lidar_max_y,
-                    (self._config.lidar_max_y - self._config.lidar_min_y)
-                    * int(self._config.pixels_per_meter)
-                    + 1,
-                )
-                hist = np.histogramdd(point_cloud[:, :2], bins=(xbins, ybins))[0]
-                hist[hist > self._config.hist_max_per_pixel] = self._config.hist_max_per_pixel
-                overhead_splat = hist / self._config.hist_max_per_pixel
-                return overhead_splat
+        # NOTE: Code from
+        # https://github.com/autonomousvision/carla_garage/blob/main/team_code/data.py#L873
+        def splat_points(point_cloud):
+            # 256 x 256 grid
+            xbins = np.linspace(
+                self._config.lidar_min_x,
+                self._config.lidar_max_x,
+                (self._config.lidar_max_x - self._config.lidar_min_x) * int(self._config.pixels_per_meter) + 1,
+            )
+            ybins = np.linspace(
+                self._config.lidar_min_y,
+                self._config.lidar_max_y,
+                (self._config.lidar_max_y - self._config.lidar_min_y) * int(self._config.pixels_per_meter) + 1,
+            )
+            hist = np.histogramdd(point_cloud[:, :2], bins=(xbins, ybins))[0]
+            hist[hist > self._config.hist_max_per_pixel] = self._config.hist_max_per_pixel
+            overhead_splat = hist / self._config.hist_max_per_pixel
+            return overhead_splat
 
-            # Remove points above the vehicle
-            lidar_pc = lidar_pc[lidar_pc[..., 2] < self._config.max_height_lidar]
-            below = lidar_pc[lidar_pc[..., 2] <= self._config.lidar_split_height]
-            above = lidar_pc[lidar_pc[..., 2] > self._config.lidar_split_height]
-            above_features = splat_points(above)
-            if self._config.use_ground_plane:
-                below_features = splat_points(below)
-                features = np.stack([below_features, above_features], axis=-1)
-            else:
-                features = np.stack([above_features], axis=-1)
-            features = np.transpose(features, (2, 0, 1)).astype(np.float32)
-            features_list.append(features)
+        # Remove points above the vehicle
+        lidar_pc = lidar_pc[lidar_pc[..., 2] < self._config.max_height_lidar]
+        below = lidar_pc[lidar_pc[..., 2] <= self._config.lidar_split_height]
+        above = lidar_pc[lidar_pc[..., 2] > self._config.lidar_split_height]
+        above_features = splat_points(above)
+        if self._config.use_ground_plane:
+            below_features = splat_points(below)
+            features = np.stack([below_features, above_features], axis=-1)
+        else:
+            features = np.stack([above_features], axis=-1)
+        features = np.transpose(features, (2, 0, 1)).astype(np.float32)
 
-        return torch.tensor(features_list)
+        return torch.tensor(features)
 
 
 class PadTargetBuilder(AbstractTargetBuilder):
@@ -128,18 +118,18 @@ class PadTargetBuilder(AbstractTargetBuilder):
                 num_trajectory_frames=self._config.trajectory_sampling.num_poses
             ).poses
         )
-        frame_idx = scene.scene_metadata.num_history_frames - 1
-        annotations = scene.frames[frame_idx].annotations
-        ego_pose = StateSE2(*scene.frames[frame_idx].ego_status.ego_pose)
+        # frame_idx = scene.scene_metadata.num_history_frames - 1
+        # annotations = scene.frames[frame_idx].annotations
+        # ego_pose = StateSE2(*scene.frames[frame_idx].ego_status.ego_pose)
 
-        agent_states, agent_labels = self._compute_agent_targets(annotations)
-        bev_semantic_map = self._compute_bev_semantic_map(annotations, scene.map_api, ego_pose)
+        # agent_states, agent_labels = self._compute_agent_targets(annotations)
+        # bev_semantic_map = self._compute_bev_semantic_map(annotations, scene.map_api, ego_pose)
 
         return {
             "trajectory": trajectory,
-            "agent_states": agent_states,
-            "agent_labels": agent_labels,
-            "bev_semantic_map": bev_semantic_map,
+            # "agent_states": agent_states,
+            # "agent_labels": agent_labels,
+            # "bev_semantic_map": bev_semantic_map,
             "token":scene.scene_metadata.initial_token
         }
 

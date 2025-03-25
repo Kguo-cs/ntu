@@ -56,7 +56,7 @@ class TemporalSelfAttention(BaseModule):
                  batch_first=True,
                  norm_cfg=None,
                  init_cfg=None,
-                 my_attention=False,
+                 proposal_query=False,
                  config=None,
                  ):
 
@@ -93,33 +93,20 @@ class TemporalSelfAttention(BaseModule):
         self.num_points = num_points
         self.num_bev_queue = num_bev_queue
 
-        self.my_attention=my_attention
+        self.proposal_query=proposal_query
 
-        if self.my_attention:
+        if self.proposal_query:
             d_ffn = config.tf_d_ffn
             d_model = config.tf_d_model
 
-            self.prev_mlp=False
-
-            if self.prev_mlp:
-                decoder_layer = nn.TransformerEncoderLayer(
-                    d_model=d_model,
-                    nhead=config.tf_num_head,
-                    dim_feedforward=d_ffn,
-                    dropout=config.tf_dropout,
-                    batch_first=True,
-                )
-                self.prev_decoder = nn.TransformerEncoder(decoder_layer, 1)
-
-            else:
-                decoder_layer = nn.TransformerDecoderLayer(
-                    d_model=d_model,
-                    nhead=config.tf_num_head,
-                    dim_feedforward=d_ffn,
-                    dropout=config.tf_dropout,
-                    batch_first=True,
-                )
-                self.prev_decoder = nn.TransformerDecoder(decoder_layer, 1)
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=d_model,
+                nhead=config.tf_num_head,
+                dim_feedforward=d_ffn,
+                dropout=config.tf_dropout,
+                batch_first=True,
+            )
+            self.self_encoder = nn.TransformerEncoder(encoder_layer, 1)
         else:
             self.sampling_offsets = nn.Linear(
                 embed_dims * self.num_bev_queue, num_bev_queue * num_heads * num_levels * num_points * 2)
@@ -200,19 +187,15 @@ class TemporalSelfAttention(BaseModule):
              Tensor: forwarded results with shape [num_query, bs, embed_dims].
         """
 
-        if self.my_attention:
+        if self.proposal_query:
             if query_pos is not None:
                 query = query + query_pos
 
             prev_bev=kwargs['img_metas']["prev_bev"]
 
-            if self.prev_mlp:
+            query = query + prev_bev[:, :query.shape[1]]
 
-                query=query+prev_bev[:,:query.shape[1]]
-
-                query=self.prev_decoder(query)
-            else:
-                query=self.prev_decoder(query,prev_bev)
+            query = self.self_encoder(query)
 
             return query
 

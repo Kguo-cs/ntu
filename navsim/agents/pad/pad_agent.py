@@ -246,7 +246,7 @@ class PadAgent(AbstractAgent):
         if test:
             l2_2s = torch.linalg.norm(proposals[:, 0] - target_trajectory, dim=-1)[:, :4]
 
-            return final_scores[:, 0].mean(), best_scores.mean(), final_scores[:, 1:], l2_2s.mean(), target_scores[:, 0]
+            return final_scores[:, 0].mean(), best_scores.mean(), final_scores, l2_2s.mean(), target_scores[:, 0]
         else:
             key_agent_corners = torch.FloatTensor(np.stack([res[1] for res in all_res])).to(proposals.device)
 

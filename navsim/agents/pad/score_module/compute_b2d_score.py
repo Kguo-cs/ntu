@@ -294,18 +294,22 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
     raw_progress = np.clip(raw_progress, a_min=0, a_max=None)
 
     multiplicate_metric_scores=collision*drivable_area_compliance
-    raw_progress=multiplicate_metric_scores*raw_progress
 
     max_raw_progress = np.maximum(raw_progress, target_progress)
 
-    progress_distance_threshold=5
+    min_raw_progress = np.minimum(raw_progress, target_progress)
 
-    fast_mask = max_raw_progress > progress_distance_threshold
+    progress=multiplicate_metric_scores*min_raw_progress/max_raw_progress
+    #raw_progress=multiplicate_metric_scores*raw_progress
 
-    progress = np.ones([len(raw_progress)], dtype=np.float64)
-
-    progress[fast_mask] = raw_progress[fast_mask] / max_raw_progress[fast_mask]
-    progress[~fast_mask] = multiplicate_metric_scores[~fast_mask]
+    # progress_distance_threshold=5
+    #
+    # fast_mask = max_raw_progress > progress_distance_threshold
+    #
+    # progress = np.ones([len(raw_progress)], dtype=np.float64)
+    #
+    # progress[fast_mask] = raw_progress[fast_mask] / max_raw_progress[fast_mask]
+    # progress[~fast_mask] = multiplicate_metric_scores[~fast_mask]
 
     # proposals_xy=np.concatenate([np.zeros_like(proposals[:,:1,:2]),proposals[:,:,:2]],axis=1)
     #

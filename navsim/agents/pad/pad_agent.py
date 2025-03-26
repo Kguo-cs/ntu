@@ -198,9 +198,9 @@ class PadAgent(AbstractAgent):
 
                 nearest_road_id = torch.round(center_nearest_lane_id)
 
-                target_road_id = torch.unique(nearest_road_id[-1])
+                target_road_id = nearest_road_id[-1:] #torch.unique(nearest_road_id[-1])
 
-                on_route_all = torch.isin(nearest_road_id, target_road_id)
+                on_route_all = nearest_road_id==target_road_id#torch.isin(nearest_road_id, target_road_id)
                 # in_multiple_lanes: if
                 # - more than one drivable polygon contains at least one corner
                 # - no polygon contains all corners

@@ -289,17 +289,23 @@ def get_sub_score(fut_box_corners,_ego_coords,proposals,target_traj,comfort,ego_
 
     for proposal_idx,proposal in enumerate(proposals[...,:2]):
         end_point = Point(proposal[-1])
-        raw_progress[proposal_idx] = centerline.project(end_point) #progress[1] - progress[0]
+        proj_progress=centerline.project(end_point)
+        if proj_progress==target_progress:
+            proj_progress=proj_progress+np.linalg.norm(proposal[-1]-target_traj[-1][:2])
+
+        raw_progress[proposal_idx] = proj_progress #clip by max target progress
 
     raw_progress = np.clip(raw_progress, a_min=0, a_max=None)
 
     multiplicate_metric_scores=collision*drivable_area_compliance
 
-    max_raw_progress = np.maximum(raw_progress, target_progress)
+    max_raw_progress = np.maximum(raw_progress, target_progress)+0.01
 
-    min_raw_progress = np.minimum(raw_progress, target_progress)
+    min_raw_progress = np.minimum(raw_progress, target_progress)+0.01
 
-    progress=multiplicate_metric_scores*min_raw_progress/max_raw_progress
+    progres_ratio=min_raw_progress/max_raw_progress
+
+    progress=multiplicate_metric_scores*progres_ratio
     #raw_progress=multiplicate_metric_scores*raw_progress
 
     # progress_distance_threshold=5

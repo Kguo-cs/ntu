@@ -134,7 +134,7 @@ class PadAgent(AbstractAgent):
             all_proposals_xy=all_proposals[:, :,:, :2]
             all_proposals_heading=all_proposals[:, :,:, 2:]
 
-            all_pos = all_proposals_xy.reshape(len(target_trajectory),-1, 2)#target_trajectory[:,:,:2]#
+            all_pos = all_proposals_xy.reshape(len(target_trajectory),-1, 2)
 
             mid_points = (all_pos.amax(1) + all_pos.amin(1)) / 2
 
@@ -162,11 +162,9 @@ class PadAgent(AbstractAgent):
 
             global_ego_corners_centers = torch.einsum("nij,nptkj->nptki", lidar2worlds, ego_corners_center_xyz)[..., :2]
 
-            vel=vel[:,:-1]
-
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
 
-            comforts = (accs < 10).all(-1)
+            comforts = (accs[:,:-1] < accs[:,-1:]).all(-1)
             
             if self.cuda_map==False:
                 for key, value in self.map_infos.items():
@@ -198,9 +196,9 @@ class PadAgent(AbstractAgent):
 
                 nearest_road_id = torch.round(center_nearest_lane_id)
 
-                target_road_id = nearest_road_id[-1:] #torch.unique(nearest_road_id[-1])
+                target_road_id = torch.unique(nearest_road_id[-1])
 
-                on_route_all = nearest_road_id==target_road_id#torch.isin(nearest_road_id, target_road_id)
+                on_route_all = torch.isin(nearest_road_id, target_road_id)
                 # in_multiple_lanes: if
                 # - more than one drivable polygon contains at least one corner
                 # - no polygon contains all corners

@@ -210,58 +210,58 @@ class CustomNuScenes3DDataset(B2D_VAD_Dataset):
             world2lidar = np.array(ann_info['sensors']['LIDAR_TOP']['world2lidar'])
             targets["lidar2world"]=np.linalg.inv(world2lidar) #lidar postion
 
-            if self.type == "train":
-                gt_bboxes_3d_bev = gt_bboxes_3d.bev  # x,y,w,l,heading
-
-                #gt_bboxes_3d_bev[:, -1] = -(gt_bboxes_3d_bev[:, -1] + np.pi / 2)
-
-                distances = np.linalg.norm(gt_bboxes_3d_bev[:, :2], axis=-1)
-
-                gt_bboxes_3d_sort = gt_bboxes_3d_bev[np.argsort(distances)][:30]
-
-                gt_bboxes_3d_all = np.concatenate([gt_bboxes_3d_sort, np.zeros([30 - len(gt_bboxes_3d_sort), 5])],
-                                                  axis=0)
-
-                agent_labels = np.zeros([30])
-
-                agent_labels[:len(gt_bboxes_3d_sort)] = True
-
-                targets["agent_states"] = gt_bboxes_3d_all
-                targets["agent_labels"] = agent_labels
-
-                map_gt_bboxes_3d = data['map_gt_bboxes_3d'].data.instance_list
-                map_gt_labels_3d = data[
-                    'map_gt_labels_3d'].data  # {'Broken':0, 'Solid':1, 'SolidSolid':2,'Center':3,'TrafficLight':4,'StopSign':5}
-                bev_semantic_map = np.zeros((self.bev_pixel_height, self.bev_pixel_width),
-                                            dtype=np.int64)  # 128,256  front 128
-
-                for map_label in range(6):
-                    map_linestring_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1],
-                                                   dtype=np.uint8)  # 256,128
-                    for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
-                        if label == map_label:
-                            points = np.array(linestring.coords).reshape((-1, 1, 2))
-                            points = self._coords_to_pixel(points)  #
-                            cv2.polylines(map_linestring_mask, [points], isClosed=False, color=255, thickness=2)
-                    map_linestring_mask = np.rot90(map_linestring_mask)[::-1]
-                    entity_mask = map_linestring_mask > 0
-                    bev_semantic_map[entity_mask] = map_label + 1
-
-                corners =compute_corners(gt_bboxes_3d_bev)#fut_boxes[:,0]#
-                category_index = gt_attr_labels[:, 27].to(int)
-
-                for agent_label in range(8):
-                    box_polygon_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1], dtype=np.uint8)
-                    for label, coords in zip(category_index, corners):
-                        if label == agent_label:
-                            exterior = coords.reshape((-1, 1, 2))
-                            exterior = self._coords_to_pixel(exterior)
-                            cv2.fillPoly(box_polygon_mask, [exterior], color=255)
-                    box_polygon_mask = np.rot90(box_polygon_mask)[::-1]
-                    entity_mask = box_polygon_mask > 0
-                    bev_semantic_map[entity_mask] = agent_label + 7
-
-                targets["bev_semantic_map"] = bev_semantic_map
+            # if self.type == "train":
+            #     gt_bboxes_3d_bev = gt_bboxes_3d.bev  # x,y,w,l,heading
+            #
+            #     #gt_bboxes_3d_bev[:, -1] = -(gt_bboxes_3d_bev[:, -1] + np.pi / 2)
+            #
+            #     distances = np.linalg.norm(gt_bboxes_3d_bev[:, :2], axis=-1)
+            #
+            #     gt_bboxes_3d_sort = gt_bboxes_3d_bev[np.argsort(distances)][:30]
+            #
+            #     gt_bboxes_3d_all = np.concatenate([gt_bboxes_3d_sort, np.zeros([30 - len(gt_bboxes_3d_sort), 5])],
+            #                                       axis=0)
+            #
+            #     agent_labels = np.zeros([30])
+            #
+            #     agent_labels[:len(gt_bboxes_3d_sort)] = True
+            #
+            #     targets["agent_states"] = gt_bboxes_3d_all
+            #     targets["agent_labels"] = agent_labels
+            #
+            #     map_gt_bboxes_3d = data['map_gt_bboxes_3d'].data.instance_list
+            #     map_gt_labels_3d = data[
+            #         'map_gt_labels_3d'].data  # {'Broken':0, 'Solid':1, 'SolidSolid':2,'Center':3,'TrafficLight':4,'StopSign':5}
+            #     bev_semantic_map = np.zeros((self.bev_pixel_height, self.bev_pixel_width),
+            #                                 dtype=np.int64)  # 128,256  front 128
+            #
+            #     for map_label in range(6):
+            #         map_linestring_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1],
+            #                                        dtype=np.uint8)  # 256,128
+            #         for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
+            #             if label == map_label:
+            #                 points = np.array(linestring.coords).reshape((-1, 1, 2))
+            #                 points = self._coords_to_pixel(points)  #
+            #                 cv2.polylines(map_linestring_mask, [points], isClosed=False, color=255, thickness=2)
+            #         map_linestring_mask = np.rot90(map_linestring_mask)[::-1]
+            #         entity_mask = map_linestring_mask > 0
+            #         bev_semantic_map[entity_mask] = map_label + 1
+            #
+            #     corners =compute_corners(gt_bboxes_3d_bev)#fut_boxes[:,0]#
+            #     category_index = gt_attr_labels[:, 27].to(int)
+            #
+            #     for agent_label in range(8):
+            #         box_polygon_mask = np.zeros((self.bev_pixel_height, self.bev_pixel_width)[::-1], dtype=np.uint8)
+            #         for label, coords in zip(category_index, corners):
+            #             if label == agent_label:
+            #                 exterior = coords.reshape((-1, 1, 2))
+            #                 exterior = self._coords_to_pixel(exterior)
+            #                 cv2.fillPoly(box_polygon_mask, [exterior], color=255)
+            #         box_polygon_mask = np.rot90(box_polygon_mask)[::-1]
+            #         entity_mask = box_polygon_mask > 0
+            #         bev_semantic_map[entity_mask] = agent_label + 7
+            #
+            #     targets["bev_semantic_map"] = bev_semantic_map
 
                 # for label, linestring in zip(map_gt_labels_3d, map_gt_bboxes_3d):
                 #     plt.plot(linestring.xy[0],linestring.xy[1],'grey')

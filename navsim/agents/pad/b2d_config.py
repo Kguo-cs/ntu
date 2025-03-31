@@ -16,7 +16,7 @@ class PadConfig:
     agent_pred: bool=True
     area_pred: bool=True
 
-    proposal_num: int = 32
+    proposal_num: int = 64
     point_cloud_range= [-32, -32, 0.0, 32, 32,4.0]
     num_points_in_pillar: int=4
 
@@ -30,12 +30,12 @@ class PadConfig:
     command_num=7
 
     # Transformer
-    tf_d_model: int = 256
-    tf_d_ffn: int = 1024
+    tf_d_model: int = 512
+    tf_d_ffn: int = 2048
     tf_num_layers: int = 3
     tf_num_head: int = 8
     tf_dropout: float = 0.1
-    num_bev_layers: int=2
+    num_bev_layers: int = 2
     image_architecture: str = "resnet34"
 
     # loss weights

@@ -25,7 +25,7 @@ class PadConfig:
 
     proposal_num: int = 64
     point_cloud_range = [-32, -32, -2.0, 32, 32, 6.0]
-    num_points_in_pillar: int=4
+    num_points_in_pillar: int = 4
 
     half_length: float= 2.588+0.25
     half_width: float =1.1485+0.1
@@ -42,7 +42,7 @@ class PadConfig:
     tf_num_layers: int = 3
     tf_num_head: int = 8
     tf_dropout: float = 0
-    num_bev_layers: int=2
+    num_bev_layers: int = 2
     image_architecture: str = "resnet34"
 
     # loss weights

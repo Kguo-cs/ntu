@@ -15,8 +15,6 @@ from navsim.common.dataloader import MetricCacheLoader
 from navsim.common.dataclasses import SensorConfig
 from navsim.agents.pad.pad_features import PadTargetBuilder
 from navsim.agents.pad.pad_features import PadFeatureBuilder
-from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
-import math
 from .score_module.compute_b2d_score import compute_corners_torch
 from navsim.agents.transfuser.transfuser_loss import _agent_loss
 
@@ -72,7 +70,6 @@ class PadAgent(AbstractAgent):
 
                 metric_cache = MetricCacheLoader(Path(os.getenv("NAVSIM_EXP_ROOT") + "/train_metric_cache"))
                 self.train_metric_cache_paths = metric_cache.metric_cache_paths
-                metric_cache = MetricCacheLoader(Path(os.getenv("NAVSIM_EXP_ROOT") + "/test_metric_cache"))
                 self.test_metric_cache_paths = metric_cache.metric_cache_paths
 
                 self.get_scores = get_scores
@@ -164,7 +161,7 @@ class PadAgent(AbstractAgent):
 
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
 
-            comforts = (accs[:,:-1] < accs[:,-1:].max()).all(-1)
+            comforts = (accs[:,:-1] < accs[:,-1:]).all(-1)
             
             if self.cuda_map==False:
                 for key, value in self.map_infos.items():
@@ -401,37 +398,7 @@ class PadAgent(AbstractAgent):
         return self.pad_loss(targets, pred, self._config)
 
     def get_optimizers(self):
-        # optimizer = torch.optim.Adam(self.parameters(), lr=self._lr)#,weight_decay= 1e-2
-        # self.lr_warmup_steps=500
-        # self.lr_total_steps=20000
-        # self.lr_min_ratio=1e-3
-
-        # def lr_lambda(current_step):
-        #     if current_step < self.lr_warmup_steps:
-        #         return (1.0 / 3) + (current_step / self.lr_warmup_steps) * (1 - 1.0 / 3)
-        #     return 1.0
-        #     # return self.lr_min_ratio + 0.5 * (1 - self.lr_min_ratio) * (
-        #     #     1.0
-        #     #     + math.cos(
-        #     #         math.pi
-        #     #         * min(
-        #     #             1.0,
-        #     #             (current_step - self.lr_warmup_steps)
-        #     #             / (self.lr_total_steps - self.lr_warmup_steps),
-        #     #         )
-        #     #     )
-        #     # )
-
-
-        # scheduler = {
-        #     'scheduler': LambdaLR(optimizer, lr_lambda),
-        #     'interval': 'step',  # Update every step
-        #     'frequency': 1
-        # }
-
-        # return {"optimizer": optimizer, "lr_scheduler": scheduler}
-
-        return torch.optim.Adam(self._pad_model.parameters(), lr=self._lr)#,weight_decay=1e-4
+        return torch.optim.Adam(self._pad_model.parameters(), lr=self._lr)
 
     def get_training_callbacks(self):
 

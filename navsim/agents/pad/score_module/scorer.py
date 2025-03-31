@@ -41,7 +41,7 @@ class Scorer(nn.Module):
             if self.b2d:
                 self.pred_area =  MLP(config.tf_d_model, config.tf_d_ffn, 2)
             else:
-                self.pred_area =  MLP(config.tf_d_model, config.tf_d_ffn, 5*3)
+                self.pred_area =  MLP(config.tf_d_model, config.tf_d_ffn, 5*2)
 
 
     def forward(self, proposals,keyval,image_feature):

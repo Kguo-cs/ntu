@@ -164,7 +164,7 @@ class PadAgent(AbstractAgent):
 
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
 
-            comforts = (accs[:,:-1] < accs[:,-1:]).all(-1)
+            comforts = (accs[:,:-1] < accs[:,-1:].max()).all(-1)
             
             if self.cuda_map==False:
                 for key, value in self.map_infos.items():

@@ -58,7 +58,7 @@ def get_sub_score( metric_cache,poses,test):
 
     key_agent_corners = np.zeros([len(final_scores),num_col, scorer.proposal_sampling.num_poses + 1, 4, 2])
     key_agent_labels = np.zeros([len(final_scores),num_col, scorer.proposal_sampling.num_poses + 1],dtype=bool)
-    ego_areas = scorer._ego_areas[:,1:]
+    ego_areas = scorer._ego_areas[:,1:,1:]
 
     no_at_fault_collisions = scorer._multi_metrics[MultiMetricIndex.NO_COLLISION, :]
     drivable_area_compliance = scorer._multi_metrics[MultiMetricIndex.DRIVABLE_AREA, :]

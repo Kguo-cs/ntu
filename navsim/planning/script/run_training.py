@@ -17,7 +17,6 @@ from navsim.common.dataloader import SceneLoader
 from navsim.planning.training.dataset import CacheOnlyDataset, Dataset
 from navsim.planning.training.agent_lightning_module import AgentLightningModule
 
-
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = "config/training"

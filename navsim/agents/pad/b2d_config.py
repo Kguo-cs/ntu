@@ -16,7 +16,7 @@ class PadConfig:
     agent_pred: bool=True
     area_pred: bool=True
 
-    proposal_num: int = 32
+    proposal_num: int = 64
     point_cloud_range= [-32, -32, 0.0, 32, 32,4.0]
     num_points_in_pillar: int=4
 

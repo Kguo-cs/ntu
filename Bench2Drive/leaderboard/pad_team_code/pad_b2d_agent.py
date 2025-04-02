@@ -69,7 +69,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
         self.model = PadAgent(PadConfig(),1e-3,checkpoint_path=self.ckpt_path)
         self.model.initialize()
 
-        self.model.cuda()
+        #self.model.cuda()
         self.model.eval()
         self.inference_only_pipeline = []
         for inference_only_pipeline in cfg.inference_only_pipeline:
@@ -438,7 +438,7 @@ class padAgent(autonomous_agent.AutonomousAgent):
         results['pad_shape'] = stacked_imgs.shape
 
         results = self.inference_only_pipeline(results)
-        self.device = "cuda" 
+        self.device = "cpu"
         input_data_batch = mm_collate_to_batch_form([results], samples_per_gpu=1)
         for key, data in input_data_batch.items():
             if key != 'img_metas':

@@ -30,8 +30,8 @@ class PadConfig:
     command_num=7
 
     # Transformer
-    tf_d_model: int = 256
-    tf_d_ffn: int = 1024
+    tf_d_model: int = 128
+    tf_d_ffn: int = 512
     tf_num_layers: int = 3
     tf_num_head: int = 8
     tf_dropout: float = 0.1
@@ -45,7 +45,7 @@ class PadConfig:
     final_score_weight: int = 1
     pred_ce_weight: int = 1
     pred_l1_weight: int = 0.1
-    pred_area_weight: int = 2
+    pred_area_weight: int = 1
     prev_weight: int = 0.1
     agent_class_weight: float = 1.0
     agent_box_weight: float = 0.1

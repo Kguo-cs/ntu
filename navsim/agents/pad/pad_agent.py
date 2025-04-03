@@ -145,9 +145,7 @@ class PadAgent(AbstractAgent):
 
             xys = torch.einsum("nij,nj->ni", lidar2worlds, xyz)[:, :2]
 
-            vel = all_proposals_xy[:,:, 1:] - all_proposals_xy[:,:, :-1]
-
-            vel=torch.cat([all_proposals_xy[:, :,:1],vel],dim=2)/ 0.5
+            vel=torch.cat([all_proposals_xy[:, :,:1], all_proposals_xy[:,:, 1:] - all_proposals_xy[:,:, :-1]],dim=2)/ 0.5
 
             proposals_05 = torch.cat([all_proposals_xy + vel*0.5, all_proposals_heading], dim=-1)
 
@@ -164,8 +162,10 @@ class PadAgent(AbstractAgent):
 
             accs = torch.linalg.norm(vel[:,:, 1:] - vel[:,:, :-1], dim=-1) / 0.5
 
-            comforts = (accs[:,:-1] < accs[:,-1:].max()).all(-1)
-            
+            turning_rate=torch.abs(torch.cat([all_proposals_heading[:, :,:1,0]-np.pi/2, all_proposals_heading[:,:, 1:,0]-all_proposals_heading[:,:, :-1,0]],dim=2)) / 0.5
+
+            comforts = (accs[:,:-1] < accs[:,-1:].max()).all(-1) & (turning_rate[:,:-1] < turning_rate[:,-1:].max()).all(-1)
+
             if self.cuda_map==False:
                 for key, value in self.map_infos.items():
                     self.map_infos[key] = torch.tensor(value).to(target_trajectory.device)

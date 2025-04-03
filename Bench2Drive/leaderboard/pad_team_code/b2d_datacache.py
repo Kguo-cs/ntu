@@ -308,7 +308,7 @@ if not os.path.exists(cache_path):
 else:
     print(f"Directory '{cache_path}' already exists.")
 
-for type in ['train']  :#,'val'
+for type in ['train','val']  :#
     fut_box = {}
 
     anno_root ="Bench2DriveZoo/data/infos/b2d_"
@@ -321,14 +321,14 @@ for type in ['train']  :#,'val'
 
     nuscenes_data=CustomNuScenes3DDataset(type,ann_file,pipeline,modality)
 
-    data_loader=DataLoader(nuscenes_data,batch_size=1,num_workers=4,prefetch_factor=32, pin_memory=False,collate_fn=my_collate)#
+    data_loader=DataLoader(nuscenes_data,batch_size=1, pin_memory=False,collate_fn=my_collate)#num_workers=4,prefetch_factor=32,
 
     for  data in tqdm(data_loader):
         for key,value in data[0].items():
             fut_box[key]=value
 
-        # if len(fut_box)>100:
-        #     break
+        if len(fut_box)>100:
+            break
 
     save_path=type+"_fut_boxes.gz"
 

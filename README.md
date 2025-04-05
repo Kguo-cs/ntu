@@ -28,8 +28,8 @@ python -m torch.distributed.run --nproc_per_node=8 navsim/planning/script/run_b2
 
 bash leaderboard/scripts/run_evaluation_pad.sh /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0_pip_cuda122_qsub/02.15_12.22/lightning_logs/version_0/checkpoints/epoch=0-step=768.ckpt 3 /home/users/ntu/lyuchen/scratch/keguo_projects/ntu/exp/ke/B2d32_acclocal0_2000_d0_pip_cuda122_qsub/02.15_12.22/res_epoch=0-step=768
 
-rsync -avz lyuchen@aspire2pntu.nscc.sg:~/scratch/keguo_projects/ntu/exp/ke/B2d_p64_128_turnrate/04.03_20.37/lightning_logs/version_0/events.out.tfevents.1743683893.a2ap-dgx011.1103382.0 /home/ke/PAD/exp/ke
-rsync -avz lyuchen@aspire2pntu.nscc.sg:~/scratch/keguo_projects/ntu/exp/ke/B2d_p64_128_turnrate/04.03_20.37/lightning_logs/version_0/checkpoints/epoch=16-step=26129.ckpt /home/ke/PAD/exp/ke
+rsync -avz lyuchen@aspire2pntu.nscc.sg:~/scratch/keguo_projects/ntu/exp/ke/B2d_p64_128_turnrate_drop02/04.04_20.18/lightning_logs/version_0/events.out.tfevents.1743769200.a2ap-dgx010.570446.0 /home/ke/PAD/exp/ke
+rsync -avz lyuchen@aspire2pntu.nscc.sg:~/scratch/keguo_projects/ntu/exp/ke/B2d_p64_128_turnrate_drop02/04.04_20.18/lightning_logs/version_0/checkpoints/epoch=15-step=24592.ckpt /home/ke/PAD/exp/ke
 rsync -avz lyuchen@aspire2pntu.nscc.sg:~/scratch/keguo_projects/ntu/exp/B2d_cache/val_fut_boxes.gz  /home/ke/PAD/exp/B2d_cache 
 pad_target.gz
 qstat -ans

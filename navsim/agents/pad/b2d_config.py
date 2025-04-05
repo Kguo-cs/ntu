@@ -34,13 +34,13 @@ class PadConfig:
     tf_d_ffn: int = 512
     tf_num_layers: int = 3
     tf_num_head: int = 8
-    tf_dropout: float = 0.2
+    tf_dropout: float = 0.1
     num_bev_layers: int = 2
     image_architecture: str = "resnet34"
 
     # loss weights
     trajectory_weight: float = 1
-    inter_weight: float =  0.1
+    inter_weight: float =  0 #0.1
     sub_score_weight: int = 1
     final_score_weight: int = 1
     pred_ce_weight: int = 1

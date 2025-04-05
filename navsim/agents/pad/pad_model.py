@@ -35,8 +35,8 @@ class PadModel(nn.Module):
 
         if self.b2d:
             
-            # if self.training:
-            #     ego_status[:,:5]+=torch.randn_like(ego_status[:,:5])
+            if self.training:
+                ego_status[:,:5]+=torch.randn_like(ego_status[:,:5])*0.1
 
             # print(ego_status[:,1:3])
             # print(ego_status[:,:1])

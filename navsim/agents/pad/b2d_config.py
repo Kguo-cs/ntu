@@ -40,7 +40,7 @@ class PadConfig:
 
     # loss weights
     trajectory_weight: float = 1
-    inter_weight: float =  0 #0.1
+    inter_weight: float =  0.1
     sub_score_weight: int = 1
     final_score_weight: int = 1
     pred_ce_weight: int = 1
